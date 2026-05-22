@@ -41,7 +41,8 @@ data_modelo <- data %>%
 	select(ArrDel15, any_of(variables_prevuelo)) %>%
 	mutate(
 		ArrDel15 = factor(ArrDel15, levels = c(0, 1), labels = c("No", "Si"))
-	)
+	) %>%
+	filter(!is.na(ArrDel15))
 
 cat("Filas:", nrow(data_modelo), "Columnas:", ncol(data_modelo), "\n")
 print(names(data_modelo))
@@ -66,10 +67,95 @@ cat("Filas:", nrow(data_final), "\n")
 cat("Columnas:", ncol(data_final), "\n")
 
 # ============================================================================
+# ANÁLISIS DESCRIPTIVO PREVIO: SELECCIÓN DE VARIABLES
+# ============================================================================
+
+cat("\n=== ANÁLISIS DE DATOS FALTANTES EN data_modelo (ANTES DE ELIMINAR) ===\n")
+valores_faltantes_previo <- colSums(is.na(data_modelo))
+valores_faltantes_previo <- valores_faltantes_previo[valores_faltantes_previo > 0]
+
+if (length(valores_faltantes_previo) > 0) {
+  cat("Columnas con NAs:\n")
+  valores_faltantes_sorted <- sort(valores_faltantes_previo, decreasing = TRUE)
+  for (i in seq_along(valores_faltantes_sorted)) {
+    pct <- round(valores_faltantes_sorted[i] / nrow(data_modelo) * 100, 2)
+    cat(sprintf("  %s: %d NAs (%.2f%%)\n", names(valores_faltantes_sorted)[i], 
+                valores_faltantes_sorted[i], pct))
+  }
+} else {
+  cat("✓ No hay datos faltantes\n")
+}
+
+# Correlación con la variable respuesta
+cat("\n=== CORRELACIÓN DE VARIABLES NUMÉRICAS CON ArrDel15 ===\n")
+
+# Crear una versión numérica de ArrDel15
+data_correlacion <- data_modelo %>%
+  mutate(ArrDel15_num = as.numeric(ArrDel15) - 1) %>%
+  select(where(is.numeric)) %>%
+  select(-ArrDel15_num)
+
+if (ncol(data_correlacion) > 0) {
+  # Convertir ArrDel15 a numérico para calcular correlación
+  ArrDel15_num <- as.numeric(data_modelo$ArrDel15) - 1
+  
+  correlaciones <- sapply(data_correlacion, function(x) {
+    cor(x, ArrDel15_num, use = "complete.obs")
+  })
+  
+  correlaciones_sorted <- sort(abs(correlaciones), decreasing = TRUE)
+  cat("Correlaciones ordenadas por magnitud:\n")
+  for (i in seq_along(correlaciones_sorted)) {
+    var_name <- names(correlaciones_sorted)[i]
+    cor_value <- correlaciones[var_name]
+    cat(sprintf("  %s: %.4f\n", var_name, cor_value))
+  }
+} else {
+  cat("No hay variables numéricas para correlacionar (excluyendo ArrDel15)\n")
+}
+
+# Análisis de multicolinealidad entre predictoras
+cat("\n=== ANÁLISIS DE MULTICOLINEALIDAD ===\n")
+cat("(Justificación para usar Ridge en lugar de Lasso)\n\n")
+
+# Calcular matriz de correlación entre variables numéricas
+vars_numericas <- data_modelo %>%
+  select(where(is.numeric)) %>%
+  names()
+
+if (length(vars_numericas) > 1) {
+  cor_matrix <- cor(data_modelo[, vars_numericas], use = "complete.obs")
+  
+  # Detectar correlaciones altas (> 0.7 en valor absoluto)
+  cor_altas <- which(abs(cor_matrix) > 0.7 & lower.tri(cor_matrix), arr.ind = TRUE)
+  
+  if (nrow(cor_altas) > 0) {
+    cat("✓ Se detectó multicolinealidad (correlaciones > 0.7):\n")
+    for (i in 1:nrow(cor_altas)) {
+      row_idx <- cor_altas[i, 1]
+      col_idx <- cor_altas[i, 2]
+      var1 <- vars_numericas[row_idx]
+      var2 <- vars_numericas[col_idx]
+      cor_value <- cor_matrix[row_idx, col_idx]
+      cat(sprintf("  %s <-> %s: %.4f\n", var1, var2, cor_value))
+    }
+    cat("\n➜ Ridge es la opción adecuada para manejar esta multicolinealidad.\n")
+  } else {
+    cat("⚠ No se detectaron correlaciones muy altas entre predictoras.\n")
+    cat("  Sin embargo, Ridge sigue siendo útil para regularización general\n")
+    cat("  y prevenir overfitting con múltiples variables.\n")
+  }
+} else {
+  cat("No hay suficientes variables numéricas para analizar multicolinealidad\n")
+}
+
+# ============================================================================
 # ETAPA 2: PREPARACIÓN DE DATOS PARA MODELADO
 # ============================================================================
 
-library(rsample)
+cat("\n=== ETAPA 2: PREPARACIÓN DE DATOS ===\n")
+
+library(caret)
 
 # 1. Verificación de datos faltantes
 cat("\n=== VERIFICACIÓN DE DATOS FALTANTES ===\n")
@@ -91,13 +177,18 @@ print(class_dist)
 proporcion_clase_1 <- class_dist %>% filter(ArrDel15 == "Si") %>% pull(Porcentaje)
 cat("Desbalanceo: ", proporcion_clase_1, "% de vuelos retrasados\n", sep = "")
 
-# 3. Partición entrenamiento/prueba (80/20)
-cat("\n=== PARTICIÓN ENTRENAMIENTO/PRUEBA ===\n")
+# 3. Partición entrenamiento/prueba (80/20) usando createDataPartition
+cat("\n=== PARTICIÓN ENTRENAMIENTO/PRUEBA (caret::createDataPartition) ===\n")
 set.seed(2026)
-data_split <- initial_split(data_final, prop = 0.80, strata = ArrDel15)
+trainIndex <- createDataPartition(
+  data_final$ArrDel15, 
+  p = 0.80, 
+  list = FALSE, 
+  times = 1
+)
 
-datos_train <- training(data_split)
-datos_test <- testing(data_split)
+datos_train <- data_final[trainIndex, ]
+datos_test <- data_final[-trainIndex, ]
 
 cat("Datos de entrenamiento (antes de sampling): ", nrow(datos_train), " filas\n", sep = "")
 cat("Datos de prueba (antes de sampling):        ", nrow(datos_test), " filas\n", sep = "")
