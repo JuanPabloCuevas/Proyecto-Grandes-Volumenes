@@ -21,6 +21,7 @@ library(glmnet)
 library(Matrix)
 library(rpart)
 library(rpart.plot)
+library(data.table)
 
 # ============================================================================
 # ETAPA 1: CARGA Y PREPARACIÓN INICIAL DE DATOS
@@ -44,6 +45,7 @@ variables_prevuelo <- c(
   "CRSElapsedTime", "Distance", "DistanceGroup"
 )
 
+
 # Selección inicial de variables y conversión de variable respuesta
 data_modelo <- data %>%
   select(ArrDel15, any_of(variables_prevuelo)) %>%
@@ -51,23 +53,6 @@ data_modelo <- data %>%
   filter(!is.na(ArrDel15))
 
 cat("Datos iniciales: ", nrow(data_modelo), " filas, ", ncol(data_modelo), " columnas\n", sep = "")
-
-# Análisis de datos faltantes ANTES de eliminar
-cat("\n=== ANÁLISIS DE DATOS FALTANTES (previo a limpieza) ===\n")
-valores_faltantes_previo <- colSums(is.na(data_modelo))
-valores_faltantes_previo <- valores_faltantes_previo[valores_faltantes_previo > 0]
-
-if (length(valores_faltantes_previo) > 0) {
-  cat("Columnas con NAs:\n")
-  valores_faltantes_sorted <- sort(valores_faltantes_previo, decreasing = TRUE)
-  for (i in seq_along(valores_faltantes_sorted)) {
-    pct <- round(valores_faltantes_sorted[i] / nrow(data_modelo) * 100, 2)
-    cat(sprintf("  %s: %d NAs (%.2f%%)\n", names(valores_faltantes_sorted)[i], 
-                valores_faltantes_sorted[i], pct))
-  }
-} else {
-  cat("✓ No hay datos faltantes\n")
-}
 
 # Conversión de variables categóricas y eliminación de NAs
 data_final <- data_modelo %>%
@@ -83,6 +68,23 @@ data_final <- data_modelo %>%
     DistanceGroup = factor(DistanceGroup)
   ) %>%
   drop_na()
+
+# Análisis de datos faltantes ANTES de eliminar
+cat("\n=== ANÁLISIS DE DATOS FALTANTES (previo a limpieza) ===\n")
+valores_faltantes_previo <- colSums(is.na(data_final))
+valores_faltantes_previo <- valores_faltantes_previo[valores_faltantes_previo > 0]
+
+if (length(valores_faltantes_previo) > 0) {
+  cat("Columnas con NAs:\n")
+  valores_faltantes_sorted <- sort(valores_faltantes_previo, decreasing = TRUE)
+  for (i in seq_along(valores_faltantes_sorted)) {
+    pct <- round(valores_faltantes_sorted[i] / nrow(data_final) * 100, 2)
+    cat(sprintf("  %s: %d NAs (%.2f%%)\n", names(valores_faltantes_sorted)[i], 
+                valores_faltantes_sorted[i], pct))
+  }
+} else {
+  cat("✓ No hay datos faltantes\n")
+}
 
 cat("\nDatos después de limpieza: ", nrow(data_final), " filas\n", sep = "")
 
