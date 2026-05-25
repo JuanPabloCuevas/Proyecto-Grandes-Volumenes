@@ -165,7 +165,7 @@ data_interpretable <- data_final %>%
     HoraLlegada = categorizar_hora(CRSArrTime),
     Estacion = factor(categorizar_estacion(Month), levels = c("Primavera", "Verano", "Otoño", "Invierno"))
   ) %>%
-  select(-OriginAirportID, -DestAirportID, -CRSDepTime, -CRSArrTime, -Month, -OriginCityMarketID, -DestCityMarketID, -OriginWac, -DestWac)
+  select(-OriginAirportID, -DestAirportID, -CRSDepTime, -CRSArrTime, -Month, -OriginCityMarketID, -DestCityMarketID, -OriginWac, -DestWac, -DepTimeBlk, -ArrTimeBlk, -OriginState, -DestState)
 
 cat("✓ Variables interpretables creadas en data_interpretable\n")
 
