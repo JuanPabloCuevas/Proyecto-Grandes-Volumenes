@@ -31,6 +31,9 @@ cat("\n=== ETAPA 1: CARGA Y PREPARACIÓN DE DATOS ===\n")
 # Lectura de datos
 data <- read_csv("airline_2m.csv", show_col_types = FALSE)
 
+# Transformar a data table 
+setDT(data) 
+
 # Definición de variables prevuelo (sin fuga de información)
 variables_prevuelo <- c(
   "Year", "Quarter", "Month", "DayofMonth", "DayOfWeek",
