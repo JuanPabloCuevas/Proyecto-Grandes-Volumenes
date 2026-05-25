@@ -14,6 +14,8 @@ library(tidyr)
 library(caret)
 library(glmnet)
 library(Matrix)
+library(data.table)
+
 
 # ============================================================================
 # ETAPA 1: CARGA Y PREPARACIÓN INICIAL DE DATOS
@@ -22,7 +24,10 @@ library(Matrix)
 cat("\n=== ETAPA 1: CARGA Y PREPARACIÓN DE DATOS ===\n")
 
 # Lectura de datos
-data <- read_csv("airline_2m.csv", show_col_types = FALSE)
+data <- rio::import("airline_2m.csv")
+
+# Transformar a data table 
+setDT(data) 
 
 # Definición de variables prevuelo (sin fuga de información)
 variables_prevuelo <- c(
@@ -32,6 +37,9 @@ variables_prevuelo <- c(
   "DestAirportID", "DestCityMarketID", "DestState", "DestWac",
   "CRSDepTime", "CRSArrTime", "DepTimeBlk", "ArrTimeBlk",
   "CRSElapsedTime", "Distance", "DistanceGroup"
+  # antes de que deje la pista del aeropuerto de origen
+  #,"DepTime", "DepDelay", "DepDelayMinutes", "DepDel15", "DepartureDelayGroups",
+  #"TaxiOut", "WheelsOff"
 )
 
 # Selección inicial de variables y conversión de variable respuesta
@@ -59,7 +67,7 @@ if (length(valores_faltantes_previo) > 0) {
   cat("✓ No hay datos faltantes\n")
 }
 
-# Conversión de variables categóricas y eliminación de NAs
+# Conversión de variables categóricas 
 data_final <- data_modelo %>%
   mutate(
     Reporting_Airline = factor(Reporting_Airline),
@@ -74,7 +82,7 @@ data_final <- data_modelo %>%
   ) %>%
   drop_na()
 
-cat("\nDatos después de limpieza: ", nrow(data_final), " filas\n", sep = "")
+cat("\nDatos después de limpieza: ", nrow(data_final), " filas\n", ncol(data_final), " columnas\n",sep = "")
 
 # ============================================================================
 # ETAPA 2: ANÁLISIS DESCRIPTIVO PREVIO A MODELADO
@@ -114,7 +122,7 @@ if (length(vars_numericas) > 0) {
   
   # Multicolinealidad
   cat("\n--- Análisis de multicolinealidad (justificación para Ridge) ---\n")
-  cor_matrix <- cor(data_modelo[, vars_numericas], use = "complete.obs")
+  cor_matrix <- cor(data_modelo[, ..vars_numericas], use = "complete.obs")
   cor_altas <- which(abs(cor_matrix) > 0.7 & lower.tri(cor_matrix), arr.ind = TRUE)
   
   if (nrow(cor_altas) > 0) {
