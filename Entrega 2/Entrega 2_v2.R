@@ -247,19 +247,6 @@ cat("Prueba (después de sampling):        ", nrow(datos_test), " filas\n", sep 
 
 cat("\n=== MODELO LOGÍSTICO===\n")
 
-modelo_ridge <- glmnet(
-  x = X_train,
-  y = y_train,
-  weights = pesos,
-  family = "binomial",
-  alpha = 0,
-  standardize = TRUE
-)
-
-# Preparar matriz para Ridge
-datos_train_ridge <- datos_train
-datos_test_ridge <- datos_test
-
 # Combinar para matriz modelo consistente
 datos_temp <- bind_rows(datos_train, datos_test)
 X_temp <- sparse.model.matrix(ArrDel15 ~ . - 1, data = datos_temp)
@@ -288,8 +275,15 @@ cat("Pesos de clase:\n")
 cat("  Clase 0 (No): ", round(weight_0, 3), "\n", sep = "")
 cat("  Clase 1 (Si): ", round(weight_1, 3), "\n", sep = "")
 
+modelo_logistico <- glmnet(
+  x = X_train,
+  y = y_train,
+  weights = pesos,
+  family = "binomial",
+  standardize = TRUE
+)
+
 # Entrenar Ridge
-set.seed(2026)
 modelo_ridge <- glmnet(
   x = X_train,
   y = y_train,
