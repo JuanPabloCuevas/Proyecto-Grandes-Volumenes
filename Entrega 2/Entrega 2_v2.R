@@ -236,16 +236,9 @@ cat("Prueba (después de sampling):        ", nrow(datos_test), " filas\n", sep 
 
 cat("\n=== ETAPA 5: MODELO LOGÍSTICO (RIDGE REGRESSION) ===\n")
 
-# Preparar matriz para Ridge (solo variables numéricas y algunas categóricas)
-variables_para_ridge <- c(
-  "ArrDel15", "Year", "Quarter", "DayofMonth", "DayOfWeek",
-  "Reporting_Airline", "OriginState", "DestState",
-  "DepTimeBlk", "ArrTimeBlk", "CRSElapsedTime", "Distance", "DistanceGroup",
-  "OriginRiesgo", "DestRiesgo", "HoraSalida", "HoraLlegada", "Estacion"
-)
-
-datos_train_ridge <- datos_train %>% select(all_of(variables_para_ridge))
-datos_test_ridge <- datos_test %>% select(all_of(variables_para_ridge))
+# Preparar matriz para Ridge
+datos_train_ridge <- datos_train
+datos_test_ridge <- datos_test
 
 # Combinar para matriz modelo consistente
 datos_temp <- bind_rows(datos_train_ridge, datos_test_ridge)
@@ -308,8 +301,8 @@ cat("  Lambda óptimo: ", round(lambda_optimo, 6), "\n", sep = "")
 cat("\n=== ETAPA 6: ÁRBOL DE CLASIFICACIÓN (RPART) ===\n")
 
 # Preparar datos para rpart
-datos_train_rpart <- datos_train %>% select(all_of(variables_para_ridge))
-datos_test_rpart <- datos_test %>% select(all_of(variables_para_ridge))
+datos_train_rpart <- datos_train
+datos_test_rpart <- datos_test
 
 # Sincronizar niveles de factor
 for (col in names(datos_test_rpart)) {
