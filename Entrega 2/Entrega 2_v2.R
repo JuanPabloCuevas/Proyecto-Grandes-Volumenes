@@ -209,7 +209,7 @@ data_interpretable <- data_final %>%
   select(-OriginAirportID, -DestAirportID, -CRSDepTime, -CRSArrTime, -Month, 
          -OriginCityMarketID, -DestCityMarketID, -OriginWac, -DestWac, -DepTimeBlk, 
          -ArrTimeBlk, -OriginState, -DestState, -Reporting_Airline, -Distance, 
-         -DistanceGroup, -CRSElapsedTime, -TiempoGrupo)
+         -DistanceGroup, -CRSElapsedTime, -TiempoGrupo, -Quarter)
 
 cat("✓ Variables interpretables creadas en data_interpretable\n")
 
@@ -311,6 +311,7 @@ cat("Pesos de clase:\n")
 cat("  Clase 0 (No): ", round(weight_0, 3), "\n", sep = "")
 cat("  Clase 1 (Si): ", round(weight_1, 3), "\n", sep = "")
 
+# Entrenar logística
 modelo_logistico <- glmnet(
   x = X_train,
   y = y_train,
@@ -319,8 +320,6 @@ modelo_logistico <- glmnet(
   standardize = TRUE,
   lambda = 0 
 )
-
-
 
 # Entrenar Ridge
 modelo_ridge <- glmnet(
