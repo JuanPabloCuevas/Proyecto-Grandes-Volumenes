@@ -113,13 +113,13 @@ categorizar_riesgo <- function(data, id_col, target_col) {
   return(tasas)
 }
 
-# Función para categorizar hora del día
+# Función para categorizar hora del día (VECTORIZADA)
 categorizar_hora <- function(hora) {
-  if (is.na(hora)) return(NA)
-  
-  hora_num <- as.numeric(substr(sprintf("%04d", as.numeric(hora)), 1, 2))
+  # Extraer horas de forma vectorizada
+  hora_num <- floor(as.numeric(hora) / 100)
   
   case_when(
+    is.na(hora_num) ~ NA_character_,
     hora_num >= 6 & hora_num < 12 ~ "Mañana",
     hora_num >= 12 & hora_num < 18 ~ "Tarde",
     hora_num >= 18 & hora_num < 24 ~ "Noche",
@@ -158,8 +158,8 @@ data_interpretable <- data_final %>%
   mutate(
     OriginRiesgo = factor(OriginRiesgo, levels = c("Bajo", "Medio", "Alto")),
     DestRiesgo = factor(DestRiesgo, levels = c("Bajo", "Medio", "Alto")),
-    HoraSalida = sapply(CRSDepTime, categorizar_hora),
-    HoraLlegada = sapply(CRSArrTime, categorizar_hora),
+    HoraSalida = categorizar_hora(CRSDepTime),
+    HoraLlegada = categorizar_hora(CRSArrTime),
     Estacion = factor(categorizar_estacion(Month), levels = c("Primavera", "Verano", "Otoño", "Invierno"))
   ) %>%
   select(-OriginAirportID, -DestAirportID, -CRSDepTime, -CRSArrTime, -Month, -OriginCityMarketID, -DestCityMarketID, -OriginWac, -DestWac)
