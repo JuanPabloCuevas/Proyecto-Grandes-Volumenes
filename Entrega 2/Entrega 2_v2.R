@@ -28,9 +28,10 @@ library(Matrix)
 library(rpart)
 library(rpart.plot)
 library(data.table)
-library(randomForest)
+library(ranger)
 library(gbm)
 library(xgboost)
+library(parallel)
 set.seed(2026)
 
 
@@ -323,6 +324,7 @@ cat("  Clase 1 (Si): ", round(weight_1, 3), "\n", sep = "")
 #### MODELO LOGÍSTICO ####
 
 # Entrenar logística
+set.seed(2026)
 modelo_logistico <- glmnet(
   x = X_train,
   y = y_train,
@@ -361,6 +363,7 @@ cat("\n=== MÉTRICA AUC ===\n")
 cat("El valor del AUC es:", round(auc_valor, 4), "\n")
 
 # Entrenar Ridge
+set.seed(2026)
 modelo_ridge <- glmnet(
   x = X_train,
   y = y_train,
@@ -450,7 +453,7 @@ cat("✓ Árbol podado\n")
 
 # Visualizar
 cat("\nGenerando visualización del árbol...\n")
-rpart.plot(arbol_pruned, main = "Árbol de Clasificación - Retrasos Aéreos")
+rpart.plot(arbol_pruned, main = "Árbol de Clasificación - Retrasos Aéreos", cex = 0.6)
 
 # Predicciones y evaluación
 cat("\n--- Evaluación en datos de prueba ---\n")
@@ -469,27 +472,32 @@ auc_arbol <- roc_arbol$auc[1]
 cat("AUC del árbol: ", round(auc_arbol, 4), "\n", sep = "")
 
 # ============================================================================
-# ETAPA 7: RANDOM FOREST
+# ETAPA 7: RANDOM FOREST (RANGER - Optimizado para datos grandes)
 # ============================================================================
 
-cat("\n=== ETAPA 7: RANDOM FOREST ===")
-cat("\nEntrenando Random Forest (mtry = sqrt(p))...\n")
+cat("\n=== ETAPA 7: RANDOM FOREST (RANGER) ===")
+cat("\nEntrenando Random Forest con ranger...\n")
 
 set.seed(2026)
-rf_model <- randomForest(
+rf_model <- ranger(
   ArrDel15 ~ .,
   data = datos_train_rpart,
-  ntree = 200,
-  mtry = sqrt(ncol(datos_train_rpart) - 1),
-  importance = TRUE,
-  classwt = c(weight_no, weight_si)
+  num.trees = 100,
+  mtry = floor(sqrt(ncol(datos_train_rpart) - 1)),
+  min.node.size = 20,
+  sample.fraction = 0.7,
+  importance = "impurity",
+  probability = TRUE,
+  case.weights = pesos_rpart,
+  num.threads = parallel::detectCores()
 )
 
 cat("✓ Random Forest entrenado\n")
 
 # Predicciones
-rf_pred <- predict(rf_model, newdata = datos_test_rpart, type = "class")
-rf_pred_prob <- predict(rf_model, newdata = datos_test_rpart, type = "prob")[, 2]
+rf_pred_obj <- predict(rf_model, data = datos_test_rpart)
+rf_pred_prob <- rf_pred_obj$predictions[, 2]
+rf_pred <- factor(ifelse(rf_pred_prob > 0.5, "Si", "No"), levels = c("No", "Si"))
 
 # Evaluación
 rf_cm <- table(Predicho = rf_pred, Real = datos_test_rpart$ArrDel15)
@@ -504,8 +512,7 @@ cat("AUC: ", round(auc_rf, 4), "\n", sep = "")
 
 # Importancia de variables
 cat("\n--- Top 10 variables más importantes ---\n")
-rf_importance <- importance(rf_model)
-rf_importance_sorted <- sort(rf_importance[, "MeanDecreaseGini"], decreasing = TRUE)[1:10]
+rf_importance_sorted <- sort(rf_model$variable.importance, decreasing = TRUE)[1:10]
 print(rf_importance_sorted)
 
 # ============================================================================
@@ -531,6 +538,7 @@ gbm_model <- gbm(
   n.trees = 500,
   shrinkage = 0.01,
   interaction.depth = 4,
+  weights = pesos_rpart,
   verbose = FALSE
 )
 
@@ -570,7 +578,7 @@ X_test_xgb <- sparse.model.matrix(ArrDel15 ~ . - 1, data = datos_test_rpart)
 y_train_xgb <- as.numeric(datos_train_rpart$ArrDel15) - 1
 y_test_xgb <- as.numeric(datos_test_rpart$ArrDel15) - 1
 
-dtrain_xgb <- xgb.DMatrix(data = X_train_xgb, label = y_train_xgb)
+dtrain_xgb <- xgb.DMatrix(data = X_train_xgb, label = y_train_xgb, weight = pesos_rpart)
 dtest_xgb <- xgb.DMatrix(data = X_test_xgb, label = y_test_xgb)
 
 cat("✓ Matrices preparadas\n")
