@@ -21,6 +21,7 @@ library(glmnet)
 library(Matrix)
 library(rpart)
 library(rpart.plot)
+library(data.table)
 
 # ============================================================================
 # ETAPA 1: CARGA Y PREPARACIÓN INICIAL DE DATOS
