@@ -147,8 +147,8 @@ riesgo_destino <- categorizar_riesgo(data_final, "DestAirportID", "ArrDel15")
 cat("  ✓ Origen: ", paste(table(riesgo_origen$riesgo), collapse = " | "), "\n", sep = "")
 cat("  ✓ Destino: ", paste(table(riesgo_destino$riesgo), collapse = " | "), "\n", sep = "")
 
-# Transformar datos_final con variables interpretables
-data_final <- data_final %>%
+# Crear nueva tabla con variables interpretables
+data_interpretable <- data_final %>%
   left_join(riesgo_origen %>% select(OriginAirportID, riesgo),
             by = "OriginAirportID", suffix = c("", "_origen")) %>%
   rename(OriginRiesgo = riesgo) %>%
@@ -164,7 +164,7 @@ data_final <- data_final %>%
   ) %>%
   select(-OriginAirportID, -DestAirportID, -CRSDepTime, -CRSArrTime, -Month, -OriginCityMarketID, -DestCityMarketID, -OriginWac, -DestWac)
 
-cat("✓ Variables interpretables creadas\n")
+cat("✓ Variables interpretables creadas en data_interpretable\n")
 
 # ============================================================================
 # ETAPA 3: ANÁLISIS DESCRIPTIVO PREVIO A MODELADO
@@ -174,21 +174,21 @@ cat("\n=== ETAPA 3: ANÁLISIS DESCRIPTIVO ===\n")
 
 # Distribución de variable respuesta
 cat("\n--- Distribución de la variable respuesta ---\n")
-class_dist <- data_final %>%
+class_dist <- data_interpretable %>%
   count(ArrDel15) %>%
   mutate(Porcentaje = round(n / sum(n) * 100, 2))
 print(class_dist)
 
 # Correlación con variable respuesta
 cat("\n--- Análisis de variables numéricas ---\n")
-vars_numericas <- data_final %>% select(where(is.numeric)) %>% names()
+vars_numericas <- data_interpretable %>% select(where(is.numeric)) %>% names()
 
 if (length(vars_numericas) > 0) {
   cat("Correlaciones con ArrDel15:\n")
-  ArrDel15_num <- as.numeric(data_final$ArrDel15) - 1
+  ArrDel15_num <- as.numeric(data_interpretable$ArrDel15) - 1
   
   correlaciones <- sapply(vars_numericas, function(var) {
-    cor(data_final[[var]], ArrDel15_num, use = "complete.obs")
+    cor(data_interpretable[[var]], ArrDel15_num, use = "complete.obs")
   })
   
   correlaciones_sorted <- sort(abs(correlaciones), decreasing = TRUE)
@@ -208,14 +208,14 @@ cat("\n=== ETAPA 4: PREPARACIÓN DE DATOS PARA MODELADO ===\n")
 # Partición estratificada
 set.seed(2026)
 trainIndex <- createDataPartition(
-  data_final$ArrDel15,
+  data_interpretable$ArrDel15,
   p = 0.80,
   list = FALSE,
   times = 1
 )
 
-datos_train <- data_final[trainIndex, ]
-datos_test <- data_final[-trainIndex, ]
+datos_train <- data_interpretable[trainIndex, ]
+datos_test <- data_interpretable[-trainIndex, ]
 
 cat("Entrenamiento (antes de sampling): ", nrow(datos_train), " filas\n", sep = "")
 cat("Prueba (antes de sampling):        ", nrow(datos_test), " filas\n", sep = "")
