@@ -210,8 +210,8 @@ data_interpretable <- data_final %>%
     AerolineaRiesgo = factor(AerolineaRiesgo, levels = c("Bajo", "Medio", "Alto")),
     DistanciaRiesgo = factor(DistanciaRiesgo, levels = c("Bajo", "Medio", "Alto")),
     TiempoRiesgo = factor(TiempoRiesgo, levels = c("Bajo", "Medio", "Alto")),
-    HoraSalida = categorizar_hora(CRSDepTime),
-    HoraLlegada = categorizar_hora(CRSArrTime),
+    HoraSalida = factor(categorizar_hora(CRSDepTime), levels = c("Madrugada", "Mañana", "Tarde", "Noche")),
+    HoraLlegada = factor(categorizar_hora(CRSArrTime), levels = c("Madrugada", "Mañana", "Tarde", "Noche")),
     Estacion = factor(categorizar_estacion(Month), levels = c("Primavera", "Verano", "Otoño", "Invierno"))
   ) %>%
   select(-OriginAirportID, -DestAirportID, -CRSDepTime, -CRSArrTime, -Month, 
@@ -319,12 +319,10 @@ cat("Pesos de clase:\n")
 cat("  Clase 0 (No): ", round(weight_0, 3), "\n", sep = "")
 cat("  Clase 1 (Si): ", round(weight_1, 3), "\n", sep = "")
 
-<<<<<<< HEAD
 
 #### MODELO LOGÍSTICO ####
-=======
+
 # Entrenar logística
->>>>>>> 4e2a7897897ed8eeb786f17d9285d530cbb9c3e8
 modelo_logistico <- glmnet(
   x = X_train,
   y = y_train,
@@ -361,8 +359,6 @@ auc_valor <- auc(curva_roc)
 
 cat("\n=== MÉTRICA AUC ===\n")
 cat("El valor del AUC es:", round(auc_valor, 4), "\n")
-
-
 
 # Entrenar Ridge
 modelo_ridge <- glmnet(
@@ -483,7 +479,7 @@ set.seed(2026)
 rf_model <- randomForest(
   ArrDel15 ~ .,
   data = datos_train_rpart,
-  ntree = 500,
+  ntree = 200,
   mtry = sqrt(ncol(datos_train_rpart) - 1),
   importance = TRUE,
   classwt = c(weight_no, weight_si)
@@ -588,15 +584,14 @@ cat("\nEntrenando XGBoost...\n")
 
 set.seed(2026)
 xgb_model <- xgboost(
-  data = dtrain_xgb,
+  x = dtrain_xgb,
   objective = "binary:logistic",
   nrounds = 300,
-  eta = 0.05,
+  learning_rate = 0.05,
   max_depth = 4,
   subsample = 0.8,
   colsample_bytree = 0.8,
-  scale_pos_weight = scale_pos_weight,
-  verbose = 0
+  scale_pos_weight = scale_pos_weight
 )
 
 cat("✓ XGBoost entrenado\n")
