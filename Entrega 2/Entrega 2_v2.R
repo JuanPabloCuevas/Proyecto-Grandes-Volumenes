@@ -94,7 +94,7 @@ cat("\nDatos después de limpieza: ", nrow(data_final), " filas\n", sep = "")
 
 cat("\n=== ETAPA 2: CREACIÓN DE VARIABLES INTERPRETABLES ===\n")
 
-# Función para categorizar riesgo basado en tasa de retrasos
+# Función para categorizar riesgo basado en tasa de retrasos por aeropuerto
 categorizar_riesgo <- function(data, id_col, target_col) {
   tasas <- data %>%
     group_by(!!sym(id_col)) %>%
@@ -143,7 +143,6 @@ categorizar_estacion <- function(mes) {
   )
 }
 
-cat("Categorizando variables de riesgo...\n")
 
 # Categorizar aeropuertos, aerolínea y distancia
 riesgo_origen <- categorizar_riesgo(data_final, "OriginAirportID", "ArrDel15")
@@ -248,22 +247,32 @@ cat("Entrenamiento (después de sampling): ", nrow(datos_train), " filas\n", sep
 cat("Prueba (después de sampling):        ", nrow(datos_test), " filas\n", sep = "")
 
 # ============================================================================
-# ETAPA 5: MODELO LOGÍSTICO CON REGULARIZACIÓN RIDGE
+#  MODELO LOGÍSTICO Y CON REGULARIZACIÓN RIDGE
 # ============================================================================
 
-cat("\n=== ETAPA 5: MODELO LOGÍSTICO (RIDGE REGRESSION) ===\n")
+
+cat("\n=== MODELO LOGÍSTICO===\n")
+
+modelo_ridge <- glmnet(
+  x = X_train,
+  y = y_train,
+  weights = pesos,
+  family = "binomial",
+  alpha = 0,
+  standardize = TRUE
+)
 
 # Preparar matriz para Ridge
 datos_train_ridge <- datos_train
 datos_test_ridge <- datos_test
 
 # Combinar para matriz modelo consistente
-datos_temp <- bind_rows(datos_train_ridge, datos_test_ridge)
+datos_temp <- bind_rows(datos_train, datos_test)
 X_temp <- sparse.model.matrix(ArrDel15 ~ . - 1, data = datos_temp)
 y_temp <- as.numeric(datos_temp$ArrDel15) - 1
 
-n_train <- nrow(datos_train_ridge)
-n_test <- nrow(datos_test_ridge)
+n_train <- nrow(datos_train)
+n_test <- nrow(datos_test)
 
 X_train <- X_temp[1:n_train, ]
 y_train <- y_temp[1:n_train]
