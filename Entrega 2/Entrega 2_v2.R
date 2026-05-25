@@ -311,6 +311,8 @@ cat("Pesos de clase:\n")
 cat("  Clase 0 (No): ", round(weight_0, 3), "\n", sep = "")
 cat("  Clase 1 (Si): ", round(weight_1, 3), "\n", sep = "")
 
+
+#### MODELO LOGÍSTICO ####
 modelo_logistico <- glmnet(
   x = X_train,
   y = y_train,
@@ -319,6 +321,34 @@ modelo_logistico <- glmnet(
   standardize = TRUE,
   lambda = 0 
 )
+
+# Usamos type = "response" para obtener probabilidades entre 0 y 1
+prediccion_logistica <- predict(modelo_logistico, 
+                                newx = X_test, type = "response")
+
+# Usamos 0.5 como umbral estándar inicial
+predicciones_clase <- ifelse(prediccion_logistica > 0.5, 1, 0)
+
+pred_factor <- factor(predicciones_clase, levels = c(0, 1))
+y_test_factor <- factor(y_test, levels = c(0, 1))
+
+
+#  MATRIZ DE CONFUSIÓN Y MÉTRICAS BASE
+# Generamos la matriz. Es VITAL definir cuál es la clase "positiva". 
+# Asumo que 1 ("Si" hubo retraso) es la clase de interés.
+matriz_confusion <- confusionMatrix(data = pred_factor, 
+                                    reference = y_test_factor, 
+                                    positive = "1")
+
+cat("\n=== MATRIZ DE CONFUSIÓN Y MÉTRICAS ===\n")
+print(matriz_confusion)
+
+# El AUC se calcula usando las probabilidades numéricas, no las clases.
+curva_roc <- roc(response = y_test, predictor = as.numeric(prediccion_logistica))
+auc_valor <- auc(curva_roc)
+
+cat("\n=== MÉTRICA AUC ===\n")
+cat("El valor del AUC es:", round(auc_valor, 4), "\n")
 
 
 
@@ -331,6 +361,13 @@ modelo_ridge <- glmnet(
   alpha = 0,
   standardize = TRUE
 )
+
+# Usamos type = "response" para obtener probabilidades entre 0 y 1
+prediccion_logistica <- predict(modelo_logistico, 
+                                newx = X_test, type = "response")
+
+# Usamos 0.5 como umbral estándar inicial
+predicciones_clase <- ifelse(prediccion_logistica > 0.5, 1, 0)
 
 # Validación cruzada
 cv_modelo <- cv.glmnet(
