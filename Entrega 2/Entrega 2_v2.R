@@ -17,11 +17,14 @@ library(dplyr)
 library(readr)
 library(tidyr)
 library(caret)
+library(pROC)
 library(glmnet)
 library(Matrix)
 library(rpart)
 library(rpart.plot)
 library(data.table)
+set.seed(2026)
+
 
 # ============================================================================
 # ETAPA 1: CARGA Y PREPARACIÓN INICIAL DE DATOS
@@ -157,6 +160,8 @@ categorizar_tiempo_grupo <- function(minutos) {
 
 
 # Categorizar aeropuertos, aerolínea, distancia y tiempo
+# sacaría riesgo origen porque no nos interesa si los vuelos llegan tarde
+# en el aeropuerto de origen
 riesgo_origen <- categorizar_riesgo(data_final, "OriginAirportID", "ArrDel15")
 riesgo_destino <- categorizar_riesgo(data_final, "DestAirportID", "ArrDel15")
 riesgo_aerolinea <- categorizar_riesgo(data_final, "Reporting_Airline", "ArrDel15")
@@ -201,7 +206,10 @@ data_interpretable <- data_final %>%
     HoraLlegada = categorizar_hora(CRSArrTime),
     Estacion = factor(categorizar_estacion(Month), levels = c("Primavera", "Verano", "Otoño", "Invierno"))
   ) %>%
-  select(-OriginAirportID, -DestAirportID, -CRSDepTime, -CRSArrTime, -Month, -OriginCityMarketID, -DestCityMarketID, -OriginWac, -DestWac, -DepTimeBlk, -ArrTimeBlk, -OriginState, -DestState, -Reporting_Airline, -Distance, -DistanceGroup, -CRSElapsedTime, -TiempoGrupo)
+  select(-OriginAirportID, -DestAirportID, -CRSDepTime, -CRSArrTime, -Month, 
+         -OriginCityMarketID, -DestCityMarketID, -OriginWac, -DestWac, -DepTimeBlk, 
+         -ArrTimeBlk, -OriginState, -DestState, -Reporting_Airline, -Distance, 
+         -DistanceGroup, -CRSElapsedTime, -TiempoGrupo)
 
 cat("✓ Variables interpretables creadas en data_interpretable\n")
 
@@ -245,7 +253,6 @@ if (length(vars_numericas) > 0) {
 cat("\n=== ETAPA 4: PREPARACIÓN DE DATOS PARA MODELADO ===\n")
 
 # Partición estratificada
-set.seed(2026)
 trainIndex <- createDataPartition(
   data_interpretable$ArrDel15,
   p = 0.80,
@@ -309,8 +316,11 @@ modelo_logistico <- glmnet(
   y = y_train,
   weights = pesos,
   family = "binomial",
-  standardize = TRUE
+  standardize = TRUE,
+  lambda = 0 
 )
+
+
 
 # Entrenar Ridge
 modelo_ridge <- glmnet(
@@ -323,7 +333,6 @@ modelo_ridge <- glmnet(
 )
 
 # Validación cruzada
-set.seed(2026)
 cv_modelo <- cv.glmnet(
   x = X_train,
   y = y_train,
