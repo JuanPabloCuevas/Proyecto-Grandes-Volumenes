@@ -145,14 +145,16 @@ categorizar_estacion <- function(mes) {
 
 cat("Categorizando variables de riesgo...\n")
 
-# Categorizar aeropuertos y aerolínea
+# Categorizar aeropuertos, aerolínea y distancia
 riesgo_origen <- categorizar_riesgo(data_final, "OriginAirportID", "ArrDel15")
 riesgo_destino <- categorizar_riesgo(data_final, "DestAirportID", "ArrDel15")
 riesgo_aerolinea <- categorizar_riesgo(data_final, "Reporting_Airline", "ArrDel15")
+riesgo_distancia <- categorizar_riesgo(data_final, "DistanceGroup", "ArrDel15")
 
 cat("  ✓ Origen: ", paste(table(riesgo_origen$riesgo), collapse = " | "), "\n", sep = "")
 cat("  ✓ Destino: ", paste(table(riesgo_destino$riesgo), collapse = " | "), "\n", sep = "")
 cat("  ✓ Aerolínea: ", paste(table(riesgo_aerolinea$riesgo), collapse = " | "), "\n", sep = "")
+cat("  ✓ Distancia: ", paste(table(riesgo_distancia$riesgo), collapse = " | "), "\n", sep = "")
 
 # Crear nueva tabla con variables interpretables
 data_interpretable <- data_final %>%
@@ -165,15 +167,19 @@ data_interpretable <- data_final %>%
   left_join(riesgo_aerolinea %>% select(Reporting_Airline, riesgo),
             by = "Reporting_Airline", suffix = c("", "_aerolinea")) %>%
   rename(AerolineaRiesgo = riesgo) %>%
+  left_join(riesgo_distancia %>% select(DistanceGroup, riesgo),
+            by = "DistanceGroup", suffix = c("", "_distancia")) %>%
+  rename(DistanciaRiesgo = riesgo) %>%
   mutate(
     OriginRiesgo = factor(OriginRiesgo, levels = c("Bajo", "Medio", "Alto")),
     DestRiesgo = factor(DestRiesgo, levels = c("Bajo", "Medio", "Alto")),
     AerolineaRiesgo = factor(AerolineaRiesgo, levels = c("Bajo", "Medio", "Alto")),
+    DistanciaRiesgo = factor(DistanciaRiesgo, levels = c("Bajo", "Medio", "Alto")),
     HoraSalida = categorizar_hora(CRSDepTime),
     HoraLlegada = categorizar_hora(CRSArrTime),
     Estacion = factor(categorizar_estacion(Month), levels = c("Primavera", "Verano", "Otoño", "Invierno"))
   ) %>%
-  select(-OriginAirportID, -DestAirportID, -CRSDepTime, -CRSArrTime, -Month, -OriginCityMarketID, -DestCityMarketID, -OriginWac, -DestWac, -DepTimeBlk, -ArrTimeBlk, -OriginState, -DestState, -Reporting_Airline, -Distance)
+  select(-OriginAirportID, -DestAirportID, -CRSDepTime, -CRSArrTime, -Month, -OriginCityMarketID, -DestCityMarketID, -OriginWac, -DestWac, -DepTimeBlk, -ArrTimeBlk, -OriginState, -DestState, -Reporting_Airline, -Distance, -DistanceGroup)
 
 cat("✓ Variables interpretables creadas en data_interpretable\n")
 
