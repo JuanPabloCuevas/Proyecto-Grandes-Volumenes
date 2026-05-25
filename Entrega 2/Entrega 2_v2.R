@@ -334,7 +334,6 @@ modelo_logistico <- glmnet(
   lambda = 0 
 )
 
-<<<<<<< HEAD
 # Usamos type = "response" para obtener probabilidades entre 0 y 1
 prediccion_logistica <- predict(modelo_logistico, 
                                 newx = X_test, type = "response")
@@ -365,8 +364,6 @@ cat("El valor del AUC es:", round(auc_valor, 4), "\n")
 
 
 
-=======
->>>>>>> 4e2a7897897ed8eeb786f17d9285d530cbb9c3e8
 # Entrenar Ridge
 modelo_ridge <- glmnet(
   x = X_train,
