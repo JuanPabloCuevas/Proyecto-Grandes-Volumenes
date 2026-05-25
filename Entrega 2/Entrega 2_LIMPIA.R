@@ -118,16 +118,15 @@ if (length(vars_numericas) > 0) {
     var_name <- names(correlaciones_sorted)[i]
     cor_value <- correlaciones[var_name]
     cat(sprintf("  %s: %.4f\n", var_name, cor_value))
-  }
+  }}
   
   # Multicolinealidad
   cat("\n--- Análisis de multicolinealidad (justificación para Ridge) ---\n")
   cor_matrix <- cor(data_modelo[, ..vars_numericas], use = "complete.obs")
   cor_altas <- which(abs(cor_matrix) > 0.7 & lower.tri(cor_matrix), arr.ind = TRUE)
   
-  if (nrow(cor_altas) > 0) {
-    cat("✓ Multicolinealidad detectada (correlaciones > 0.7):\n")
-    for (i in 1:nrow(cor_altas)) {
+  cat("✓ Multicolinealidad detectada (correlaciones > 0.7):\n")
+  for (i in 1:nrow(cor_altas)) {
       row_idx <- cor_altas[i, 1]
       col_idx <- cor_altas[i, 2]
       var1 <- vars_numericas[row_idx]
@@ -135,12 +134,7 @@ if (length(vars_numericas) > 0) {
       cor_value <- cor_matrix[row_idx, col_idx]
       cat(sprintf("  %s <-> %s: %.4f\n", var1, var2, cor_value))
     }
-    cat("\n➜ Ridge es la opción adecuada para regularizar esta multicolinealidad.\n")
-  } else {
-    cat("⚠ Correlaciones moderadas entre predictoras.\n")
-    cat("➜ Ridge proporciona regularización general para prevenir overfitting.\n")
-  }
-}
+
 
 # ============================================================================
 # ETAPA 3: PARTICIÓN Y PREPARACIÓN PARA MODELADO
@@ -295,7 +289,6 @@ cat("  Clase 0 (No retrasado): ", round(weight_0, 3), "\n", sep = "")
 cat("  Clase 1 (Retrasado):    ", round(weight_1, 3), "\n", sep = "")
 
 # Entrenar modelo Ridge (alpha = 0)
-set.seed(2026)
 modelo_logistico <- glmnet(
   x = X_train,
   y = y_train,
