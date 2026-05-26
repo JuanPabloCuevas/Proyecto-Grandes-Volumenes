@@ -350,23 +350,24 @@ matriz_confusion <- confusionMatrix(data = pred_factor,
 cat("\n=== EVALUACIÓN - REGRESIÓN LOGÍSTICA ===\n")
 print(matriz_confusion)
 
-# Calcular Sensibilidad (Recall) y Precisión
+# Calcular Sensibilidad (Recall), Especificidad y Precisión
 tp_logistica <- matriz_confusion$table[2, 2]
 fn_logistica <- matriz_confusion$table[1, 2]
 fp_logistica <- matriz_confusion$table[2, 1]
+tn_logistica <- matriz_confusion$table[1, 1]
 sensibilidad_logistica <- tp_logistica / (tp_logistica + fn_logistica)
+especificidad_logistica <- tn_logistica / (tn_logistica + fp_logistica)
 precision_logistica <- tp_logistica / (tp_logistica + fp_logistica)
-
-# Calcular MSE
-mse_logistica <- mean((y_test - as.numeric(prediccion_logistica))^2)
+f1_logistica <- 2 * (precision_logistica * sensibilidad_logistica) / (precision_logistica + sensibilidad_logistica)
 
 # AUC
 curva_roc <- roc(response = y_test, predictor = as.numeric(prediccion_logistica))
 auc_logistica <- auc(curva_roc)[1]
 
 cat("\nSensibilidad (Recall): ", round(sensibilidad_logistica * 100, 2), "%\n", sep = "")
+cat("Especificidad: ", round(especificidad_logistica * 100, 2), "%\n", sep = "")
 cat("Precisión: ", round(precision_logistica * 100, 2), "%\n", sep = "")
-cat("MSE: ", round(mse_logistica, 4), "\n", sep = "")
+cat("F1-Score: ", round(f1_logistica, 4), "\n", sep = "")
 cat("AUC: ", round(auc_logistica, 4), "\n", sep = "")
 
 # Entrenar Ridge
@@ -407,23 +408,24 @@ matriz_confusion_ridge <- confusionMatrix(data = pred_factor_ridge,
 cat("\n=== EVALUACIÓN - RIDGE ===\n")
 print(matriz_confusion_ridge)
 
-# Calcular Sensibilidad (Recall) y Precisión
+# Calcular Sensibilidad (Recall), Especificidad y Precisión
 tp_ridge <- matriz_confusion_ridge$table[2, 2]
 fn_ridge <- matriz_confusion_ridge$table[1, 2]
 fp_ridge <- matriz_confusion_ridge$table[2, 1]
+tn_ridge <- matriz_confusion_ridge$table[1, 1]
 sensibilidad_ridge <- tp_ridge / (tp_ridge + fn_ridge)
+especificidad_ridge <- tn_ridge / (tn_ridge + fp_ridge)
 precision_ridge <- tp_ridge / (tp_ridge + fp_ridge)
-
-# Calcular MSE
-mse_ridge <- mean((y_test - as.numeric(prediccion_ridge))^2)
+f1_ridge <- 2 * (precision_ridge * sensibilidad_ridge) / (precision_ridge + sensibilidad_ridge)
 
 # AUC
 curva_roc_ridge <- roc(response = y_test, predictor = as.numeric(prediccion_ridge))
 auc_ridge <- auc(curva_roc_ridge)[1]
 
 cat("\nSensibilidad (Recall): ", round(sensibilidad_ridge * 100, 2), "%\n", sep = "")
+cat("Especificidad: ", round(especificidad_ridge * 100, 2), "%\n", sep = "")
 cat("Precisión: ", round(precision_ridge * 100, 2), "%\n", sep = "")
-cat("MSE: ", round(mse_ridge, 4), "\n", sep = "")
+cat("F1-Score: ", round(f1_ridge, 4), "\n", sep = "")
 cat("AUC: ", round(auc_ridge, 4), "\n", sep = "")
 
 cat("\n✓ Modelo Ridge entrenado\n")
@@ -497,20 +499,20 @@ predicciones_arbol_prob <- predict(arbol_pruned, newdata = datos_test_rpart, typ
 confusion_matrix <- table(Predicho = predicciones_arbol, Real = datos_test_rpart$ArrDel15)
 print(confusion_matrix)
 
-# Calcular Sensibilidad (Recall) y Precisión
+# Calcular Sensibilidad (Recall), Especificidad y Precisión
 tp_arbol <- confusion_matrix["Si", "Si"]
 fn_arbol <- confusion_matrix["No", "Si"]
 fp_arbol <- confusion_matrix["Si", "No"]
+tn_arbol <- confusion_matrix["No", "No"]
 sensibilidad_arbol <- tp_arbol / (tp_arbol + fn_arbol)
+especificidad_arbol <- tn_arbol / (tn_arbol + fp_arbol)
 precision_arbol <- tp_arbol / (tp_arbol + fp_arbol)
-
-# Calcular MSE (Mean Squared Error)
-y_test_arbol <- as.numeric(datos_test_rpart$ArrDel15) - 1
-mse_arbol <- mean((y_test_arbol - predicciones_arbol_prob)^2)
+f1_arbol <- 2 * (precision_arbol * sensibilidad_arbol) / (precision_arbol + sensibilidad_arbol)
 
 cat("\nSensibilidad (Recall) del árbol: ", round(sensibilidad_arbol * 100, 2), "%\n", sep = "")
+cat("Especificidad del árbol: ", round(especificidad_arbol * 100, 2), "%\n", sep = "")
 cat("Precisión del árbol: ", round(precision_arbol * 100, 2), "%\n", sep = "")
-cat("MSE del árbol: ", round(mse_arbol, 4), "\n", sep = "")
+cat("F1-Score del árbol: ", round(f1_arbol, 4), "\n", sep = "")
 
 # Almacenar AUC del árbol
 roc_arbol <- roc(datos_test_rpart$ArrDel15, predicciones_arbol_prob)
@@ -550,22 +552,22 @@ rf_cm <- table(Predicho = rf_pred, Real = datos_test_rpart$ArrDel15)
 roc_rf <- roc(datos_test_rpart$ArrDel15, rf_pred_prob)
 auc_rf <- roc_rf$auc[1]
 
-# Calcular Sensibilidad (Recall) y Precisión
+# Calcular Sensibilidad (Recall), Especificidad y Precisión
 tp_rf <- rf_cm["Si", "Si"]
 fn_rf <- rf_cm["No", "Si"]
 fp_rf <- rf_cm["Si", "No"]
+tn_rf <- rf_cm["No", "No"]
 sensibilidad_rf <- tp_rf / (tp_rf + fn_rf)
+especificidad_rf <- tn_rf / (tn_rf + fp_rf)
 precision_rf <- tp_rf / (tp_rf + fp_rf)
-
-# Calcular MSE
-y_test_rf <- as.numeric(datos_test_rpart$ArrDel15) - 1
-mse_rf <- mean((y_test_rf - rf_pred_prob)^2)
+f1_rf <- 2 * (precision_rf * sensibilidad_rf) / (precision_rf + sensibilidad_rf)
 
 cat("\n--- Evaluación Random Forest ---\n")
 print(rf_cm)
 cat("\nSensibilidad (Recall): ", round(sensibilidad_rf * 100, 2), "%\n", sep = "")
+cat("Especificidad: ", round(especificidad_rf * 100, 2), "%\n", sep = "")
 cat("Precisión: ", round(precision_rf * 100, 2), "%\n", sep = "")
-cat("MSE: ", round(mse_rf, 4), "\n", sep = "")
+cat("F1-Score: ", round(f1_rf, 4), "\n", sep = "")
 cat("AUC: ", round(auc_rf, 4), "\n", sep = "")
 
 # Importancia de variables
@@ -611,22 +613,22 @@ gbm_cm <- table(Predicho = gbm_pred, Real = datos_test_gbm$ArrDel15)
 roc_gbm <- roc(datos_test_gbm$ArrDel15, gbm_pred_prob)
 auc_gbm <- roc_gbm$auc[1]
 
-# Calcular Sensibilidad (Recall) y Precisión
+# Calcular Sensibilidad (Recall), Especificidad y Precisión
 tp_gbm <- gbm_cm["Si", "Si"]
 fn_gbm <- gbm_cm["No", "Si"]
 fp_gbm <- gbm_cm["Si", "No"]
+tn_gbm <- gbm_cm["No", "No"]
 sensibilidad_gbm <- tp_gbm / (tp_gbm + fn_gbm)
+especificidad_gbm <- tn_gbm / (tn_gbm + fp_gbm)
 precision_gbm <- tp_gbm / (tp_gbm + fp_gbm)
-
-# Calcular MSE
-y_test_gbm <- as.numeric(datos_test_gbm$ArrDel15_num)
-mse_gbm <- mean((y_test_gbm - gbm_pred_prob)^2)
+f1_gbm <- 2 * (precision_gbm * sensibilidad_gbm) / (precision_gbm + sensibilidad_gbm)
 
 cat("\n--- Evaluación GBM ---\n")
 print(gbm_cm)
 cat("\nSensibilidad (Recall): ", round(sensibilidad_gbm * 100, 2), "%\n", sep = "")
+cat("Especificidad: ", round(especificidad_gbm * 100, 2), "%\n", sep = "")
 cat("Precisión: ", round(precision_gbm * 100, 2), "%\n", sep = "")
-cat("MSE: ", round(mse_gbm, 4), "\n", sep = "")
+cat("F1-Score: ", round(f1_gbm, 4), "\n", sep = "")
 cat("AUC: ", round(auc_gbm, 4), "\n", sep = "")
 
 # Importancia de variables
@@ -684,22 +686,22 @@ xgb_cm <- table(Predicho = xgb_pred, Real = datos_test_rpart$ArrDel15)
 roc_xgb <- roc(datos_test_rpart$ArrDel15, xgb_pred_prob)
 auc_xgb <- roc_xgb$auc[1]
 
-# Calcular Sensibilidad (Recall) y Precisión
+# Calcular Sensibilidad (Recall), Especificidad y Precisión
 tp_xgb <- xgb_cm["Si", "Si"]
 fn_xgb <- xgb_cm["No", "Si"]
 fp_xgb <- xgb_cm["Si", "No"]
+tn_xgb <- xgb_cm["No", "No"]
 sensibilidad_xgb <- tp_xgb / (tp_xgb + fn_xgb)
+especificidad_xgb <- tn_xgb / (tn_xgb + fp_xgb)
 precision_xgb <- tp_xgb / (tp_xgb + fp_xgb)
-
-# Calcular MSE
-y_test_xgb <- as.numeric(datos_test_rpart$ArrDel15) - 1
-mse_xgb <- mean((y_test_xgb - xgb_pred_prob)^2)
+f1_xgb <- 2 * (precision_xgb * sensibilidad_xgb) / (precision_xgb + sensibilidad_xgb)
 
 cat("\n--- Evaluación XGBoost ---\n")
 print(xgb_cm)
 cat("\nSensibilidad (Recall): ", round(sensibilidad_xgb * 100, 2), "%\n", sep = "")
+cat("Especificidad: ", round(especificidad_xgb * 100, 2), "%\n", sep = "")
 cat("Precisión: ", round(precision_xgb * 100, 2), "%\n", sep = "")
-cat("MSE: ", round(mse_xgb, 4), "\n", sep = "")
+cat("F1-Score: ", round(f1_xgb, 4), "\n", sep = "")
 cat("AUC: ", round(auc_xgb, 4), "\n", sep = "")
 
 # Importancia de variables
@@ -725,6 +727,14 @@ comparacion <- data.frame(
     round(sensibilidad_gbm * 100, 2),
     round(sensibilidad_xgb * 100, 2)
   ),
+  Especificidad = c(
+    round(especificidad_logistica * 100, 2),
+    round(especificidad_ridge * 100, 2),
+    round(especificidad_arbol * 100, 2),
+    round(especificidad_rf * 100, 2),
+    round(especificidad_gbm * 100, 2),
+    round(especificidad_xgb * 100, 2)
+  ),
   Precisión = c(
     round(precision_logistica * 100, 2),
     round(precision_ridge * 100, 2),
@@ -733,13 +743,13 @@ comparacion <- data.frame(
     round(precision_gbm * 100, 2),
     round(precision_xgb * 100, 2)
   ),
-  MSE = c(
-    round(mse_logistica, 4),
-    round(mse_ridge, 4),
-    round(mse_arbol, 4),
-    round(mse_rf, 4),
-    round(mse_gbm, 4),
-    round(mse_xgb, 4)
+  "F1-Score" = c(
+    round(f1_logistica, 4),
+    round(f1_ridge, 4),
+    round(f1_arbol, 4),
+    round(f1_rf, 4),
+    round(f1_gbm, 4),
+    round(f1_xgb, 4)
   ),
   AUC = c(
     round(auc_logistica, 4),
