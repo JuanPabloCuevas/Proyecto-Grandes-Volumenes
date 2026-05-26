@@ -370,7 +370,6 @@ cat("MSE: ", round(mse_logistica, 4), "\n", sep = "")
 cat("AUC: ", round(auc_logistica, 4), "\n", sep = "")
 
 # Entrenar Ridge
-set.seed(2026)
 modelo_ridge <- glmnet(
   x = X_train,
   y = y_train,
@@ -465,7 +464,6 @@ cat("  Clase Si: ", round(weight_si, 3), "\n", sep = "")
 
 # Entrenar árbol
 cat("\nEntrenando árbol...\n")
-set.seed(2026)
 arbol_fit <- rpart(
   ArrDel15 ~ .,
   method = "class",
