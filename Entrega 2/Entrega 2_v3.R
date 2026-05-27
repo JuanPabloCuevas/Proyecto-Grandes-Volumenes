@@ -51,7 +51,10 @@ variables_prevuelo <- c(
   "OriginAirportID", "OriginCityMarketID", "OriginState", "OriginWac",
   "DestAirportID", "DestCityMarketID", "DestState", "DestWac",
   "CRSDepTime", "CRSArrTime", "DepTimeBlk", "ArrTimeBlk",
-  "CRSElapsedTime", "Distance", "DistanceGroup"
+  "CRSElapsedTime", "Distance", "DistanceGroup",
+  # antes de que deje la pista del aeropuerto de origen
+  ,"DepTime", "DepDelay", "DepDelayMinutes", "DepDel15", "DepartureDelayGroups",
+  "TaxiOut", "WheelsOff"
 )
 
 
@@ -199,7 +202,6 @@ cat("  Clase 1 (Si): ", round(weight_1, 3), "\n", sep = "")
 #### MODELO LOGÍSTICO ####
 
 # Entrenar logística
-set.seed(2026)
 modelo_logistico <- glmnet(
   x = X_train,
   y = y_train,
@@ -403,7 +405,6 @@ cat("AUC del árbol: ", round(auc_arbol, 4), "\n", sep = "")
 cat("\n=== ETAPA 6: RANDOM FOREST (RANGER) ===")
 cat("\nEntrenando Random Forest con ranger...\n")
 
-set.seed(2026)
 rf_model <- ranger(
   ArrDel15 ~ .,
   data = datos_train_rpart,
@@ -459,7 +460,6 @@ print(rf_importance_sorted)
 cat("\n\n=== ETAPA 7: GRADIENT BOOSTING (GBM) ===")
 cat("\nEntrenando GBM...\n")
 
-set.seed(2026)
 
 # Preparar datos para GBM
 datos_train_gbm <- datos_train_rpart %>%
@@ -539,7 +539,6 @@ scale_pos_weight <- sum(y_train_xgb == 0) / sum(y_train_xgb == 1)
 
 cat("\nEntrenando XGBoost...\n")
 
-set.seed(2026)
 modelo_xgb <- xgboost(
   x = X_train_xgb,
   y = y_train_xgb,
