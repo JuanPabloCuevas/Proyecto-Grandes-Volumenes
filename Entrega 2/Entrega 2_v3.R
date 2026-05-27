@@ -54,7 +54,7 @@ variables_prevuelo <- c(
   "CRSElapsedTime", "Distance", "DistanceGroup",
   # antes de que deje la pista del aeropuerto de origen
   ,"DepTime", "DepDelay", "DepDelayMinutes", "DepDel15", "DepartureDelayGroups",
-  "TaxiOut", "WheelsOff"
+  "TaxiOut"
 )
 
 
