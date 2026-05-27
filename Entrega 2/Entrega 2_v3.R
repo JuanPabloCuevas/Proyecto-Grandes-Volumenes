@@ -100,6 +100,15 @@ if (length(valores_faltantes_previo) > 0) {
 
 cat("\nDatos después de limpieza: ", nrow(data_final), " filas\n", sep = "")
 
+# Sincronizar niveles de factores en data_final
+# Esto asegura que train y test tengan los mismos niveles incluso después del muestreo
+for (col in names(data_final)) {
+  if (is.factor(data_final[[col]])) {
+    # Mantener solo los niveles que están presentes en los datos
+    data_final[[col]] <- factor(data_final[[col]])
+  }
+}
+
 # ============================================================================
 # ETAPA 2: ANÁLISIS DESCRIPTIVO PREVIO A MODELADO
 # ============================================================================
@@ -137,31 +146,36 @@ if (length(vars_numericas) > 0) {
 # ETAPA 3: PARTICIÓN Y PREPARACIÓN PARA MODELADO
 # ============================================================================
 
-cat("\n=== ETAPA 3: PREPARACIÓN DE DATOS PARA MODELADO ===\n")
+cat("\n=== ETAPA 4: PREPARACIÓN DE DATOS PARA MODELADO ===\n")
+set.seed(2026)
+#sampling
+n_train <- 100000
+n_test <- 25000
+n_muestra_total <- n_train + n_test
+
+#sampling toda la muestra
+data_muestra <- data_final %>% slice_sample(n = n_muestra_total)
 
 # Partición estratificada
 trainIndex <- createDataPartition(
-  data_final$ArrDel15,
+  data_muestra$ArrDel15,
   p = 0.80,
   list = FALSE,
   times = 1
 )
 
-datos_train <- data_final[trainIndex, ]
-datos_test <- data_final[-trainIndex, ]
-
-cat("Entrenamiento (antes de sampling): ", nrow(datos_train), " filas\n", sep = "")
-cat("Prueba (antes de sampling):        ", nrow(datos_test), " filas\n", sep = "")
-
-# Sampling para manejo eficiente de memoria
-n_train_sample <- min(100000, nrow(datos_train))
-n_test_sample <- min(25000, nrow(datos_test))
-
-datos_train <- datos_train %>% slice_sample(n = n_train_sample)
-datos_test <- datos_test %>% slice_sample(n = n_test_sample)
+datos_train <- data_muestra[trainIndex, ]
+datos_test <- data_muestra[-trainIndex, ]
 
 cat("Entrenamiento (después de sampling): ", nrow(datos_train), " filas\n", sep = "")
 cat("Prueba (después de sampling):        ", nrow(datos_test), " filas\n", sep = "")
+
+#verificar que las proporciones se mantuvieron
+cat("\n--- Proporción de retrasos en entrenamiento ---\n")
+print(prop.table(table(datos_train$ArrDel15)))
+
+cat("\n--- Proporción de retrasos en prueba ---\n")
+print(prop.table(table(datos_test$ArrDel15)))
 
 # ============================================================================
 # ETAPA 4: MODELO LOGÍSTICO Y CON REGULARIZACIÓN RIDGE
@@ -320,10 +334,15 @@ cat("\n=== ETAPA 5: ÁRBOL DE CLASIFICACIÓN (RPART) ===\n")
 datos_train_rpart <- datos_train
 datos_test_rpart <- datos_test
 
-# Sincronizar niveles de factor
-for (col in names(datos_test_rpart)) {
-  if (is.factor(datos_test_rpart[[col]])) {
-    levels(datos_test_rpart[[col]]) <- levels(datos_train_rpart[[col]])
+# Sincronizar niveles de factor (bidireccional)
+for (col in names(datos_train_rpart)) {
+  if (is.factor(datos_train_rpart[[col]])) {
+    # Obtener la unión de todos los niveles
+    todos_niveles <- union(levels(datos_train_rpart[[col]]), levels(datos_test_rpart[[col]]))
+    
+    # Asignar los mismos niveles a ambos conjuntos
+    datos_train_rpart[[col]] <- factor(datos_train_rpart[[col]], levels = todos_niveles)
+    datos_test_rpart[[col]] <- factor(datos_test_rpart[[col]], levels = todos_niveles)
   }
 }
 

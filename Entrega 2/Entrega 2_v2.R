@@ -258,30 +258,35 @@ if (length(vars_numericas) > 0) {
 # ============================================================================
 
 cat("\n=== ETAPA 4: PREPARACIÓN DE DATOS PARA MODELADO ===\n")
+set.seed(2026)
+#sampling
+n_train <- 100000
+n_test <- 25000
+n_muestra_total <- n_train + n_test
+
+#sampling toda la muestra
+data_muestra <- data_final %>% slice_sample(n = n_muestra_total)
 
 # Partición estratificada
 trainIndex <- createDataPartition(
-  data_interpretable$ArrDel15,
+  data_muestra$ArrDel15,
   p = 0.80,
   list = FALSE,
   times = 1
 )
 
-datos_train <- data_interpretable[trainIndex, ]
-datos_test <- data_interpretable[-trainIndex, ]
-
-cat("Entrenamiento (antes de sampling): ", nrow(datos_train), " filas\n", sep = "")
-cat("Prueba (antes de sampling):        ", nrow(datos_test), " filas\n", sep = "")
-
-# Sampling para manejo eficiente de memoria
-n_train_sample <- min(100000, nrow(datos_train))
-n_test_sample <- min(25000, nrow(datos_test))
-
-datos_train <- datos_train %>% slice_sample(n = n_train_sample)
-datos_test <- datos_test %>% slice_sample(n = n_test_sample)
+datos_train <- data_muestra[trainIndex, ]
+datos_test <- data_muestra[-trainIndex, ]
 
 cat("Entrenamiento (después de sampling): ", nrow(datos_train), " filas\n", sep = "")
 cat("Prueba (después de sampling):        ", nrow(datos_test), " filas\n", sep = "")
+
+#verificar que las proporciones se mantuvieron
+cat("\n--- Proporción de retrasos en entrenamiento ---\n")
+print(prop.table(table(datos_train$ArrDel15)))
+
+cat("\n--- Proporción de retrasos en prueba ---\n")
+print(prop.table(table(datos_test$ArrDel15)))
 
 # ============================================================================
 #  MODELO LOGÍSTICO Y CON REGULARIZACIÓN RIDGE
