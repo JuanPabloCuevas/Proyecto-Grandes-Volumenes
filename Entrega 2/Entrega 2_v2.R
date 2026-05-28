@@ -564,9 +564,39 @@ cat("Xerror mínimo: ", round(xerror_min, 6), "\n", sep = "")
 arbol_pruned <- rpart::prune(arbol_fit, cp = cp_optimo)
 cat("✓ Árbol podado\n")
 
-# Visualizar
+# Visualizar con estilo mejorado
 cat("\nGenerando visualización del árbol...\n")
-rpart.plot(arbol_pruned, main = "Árbol de Clasificación - Retrasos Aéreos", cex = 0.6)
+
+# Opción 1: rpart.plot mejorado con mejor estilo
+png("resultados_analisis/arbol_clasificacion.png", width = 1400, height = 900, res = 120)
+rpart.plot(
+  arbol_pruned,
+  main = "Árbol de Clasificación - Retrasos Aéreos",
+  type = 1,                    # Tipo de árbol
+  extra = 101,                 # Mostrar probabilidades
+  cex = 0.8,                   # Tamaño del texto
+  fallen.leaves = FALSE,       # Hojas en el fondo
+  box.palette = "RdYlGn",      # Paleta de colores
+  shadow.col = "gray70",       # Sombra para profundidad
+  tweak = 0.8,                 # Ajuste del espaciado
+  compress = FALSE             # No comprimir el árbol
+)
+dev.off()
+cat("✓ Árbol guardado en: resultados_analisis/arbol_clasificacion.png\n")
+
+# Visualizar en pantalla
+rpart.plot(
+  arbol_pruned,
+  main = "Árbol de Clasificación - Retrasos Aéreos",
+  type = 4,
+  extra = 101,
+  cex = 0.6,
+  fallen.leaves = TRUE,
+  box.palette = "RdYlGn",
+  shadow.col = "gray70",
+  tweak = 1.2,
+  compress = FALSE
+)
 
 # Predicciones y evaluación
 cat("\n--- Evaluación en datos de prueba ---\n")
