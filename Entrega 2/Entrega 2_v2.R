@@ -11,7 +11,8 @@
 # Etapa 7: Random Forest
 # Etapa 8: Gradient Boosting (GBM)
 # Etapa 9: XGBoost
-# Etapa 10: Comparación de todos los modelos
+# Etapa 10: Estadísticas descriptivas y visualizaciones de modelos
+# Etapa 11: Comparación de todos los modelos
 # ============================================================================
 
 
@@ -32,6 +33,9 @@ library(ranger)
 library(gbm)
 library(xgboost)
 library(parallel)
+library(ggplot2)
+library(gridExtra)
+library(gt)
 
 # ============================================================================
 # ETAPA 1: CARGA Y PREPARACIÓN INICIAL DE DATOS
@@ -265,7 +269,7 @@ n_test <- 25000
 n_muestra_total <- n_train + n_test
 
 #sampling toda la muestra
-data_muestra <- data_final %>% slice_sample(n = n_muestra_total)
+data_muestra <- data_interpretable %>% slice_sample(n = n_muestra_total)
 
 # Partición estratificada
 trainIndex <- createDataPartition(
@@ -435,6 +439,73 @@ cat("AUC: ", round(auc_ridge, 4), "\n", sep = "")
 
 cat("\n✓ Modelo Ridge entrenado\n")
 cat("  Lambda óptimo: ", round(lambda_optimo, 6), "\n", sep = "")
+
+# ============================================================================
+# ETAPA 5B: MODELO LASSO
+# ============================================================================
+
+cat("\n=== MODELO LASSO ===\n")
+
+# Entrenar Lasso
+modelo_lasso <- glmnet(
+  x = X_train,
+  y = y_train,
+  weights = pesos,
+  family = "binomial",
+  alpha = 1,
+  standardize = TRUE
+)
+
+# Validación cruzada para obtener lambda óptimo
+cv_modelo_lasso <- cv.glmnet(
+  x = X_train,
+  y = y_train,
+  weights = pesos,
+  family = "binomial",
+  alpha = 1,
+  nfolds = 5
+)
+
+lambda_optimo_lasso <- cv_modelo_lasso$lambda.min
+
+# Predicciones con lasso usando lambda óptimo
+prediccion_lasso <- predict(modelo_lasso, 
+                            newx = X_test, type = "response", s = lambda_optimo_lasso)
+
+# Convertir a clases
+predicciones_clase_lasso <- ifelse(prediccion_lasso > 0.5, 1, 0)
+pred_factor_lasso <- factor(predicciones_clase_lasso, levels = c(0, 1))
+
+# Matriz de confusión
+matriz_confusion_lasso <- confusionMatrix(data = pred_factor_lasso, 
+                                          reference = y_test_factor, 
+                                          positive = "1")
+
+cat("\n=== EVALUACIÓN - LASSO ===\n")
+print(matriz_confusion_lasso)
+
+# Calcular Sensibilidad (Recall), Especificidad y Precisión
+tp_lasso <- matriz_confusion_lasso$table[2, 2]
+fn_lasso <- matriz_confusion_lasso$table[1, 2]
+fp_lasso <- matriz_confusion_lasso$table[2, 1]
+tn_lasso <- matriz_confusion_lasso$table[1, 1]
+sensibilidad_lasso <- tp_lasso / (tp_lasso + fn_lasso)
+especificidad_lasso <- tn_lasso / (tn_lasso + fp_lasso)
+precision_lasso <- tp_lasso / (tp_lasso + fp_lasso)
+f1_lasso <- 2 * (precision_lasso * sensibilidad_lasso) / (precision_lasso + sensibilidad_lasso)
+
+# AUC
+curva_roc_lasso <- roc(response = y_test, predictor = as.numeric(prediccion_lasso))
+auc_lasso <- auc(curva_roc_lasso)[1]
+
+cat("\nSensibilidad (Recall): ", round(sensibilidad_lasso * 100, 2), "%\n", sep = "")
+cat("Especificidad: ", round(especificidad_lasso * 100, 2), "%\n", sep = "")
+cat("Precisión: ", round(precision_lasso * 100, 2), "%\n", sep = "")
+cat("F1-Score: ", round(f1_lasso, 4), "\n", sep = "")
+cat("AUC: ", round(auc_lasso, 4), "\n", sep = "")
+
+cat("\n✓ Modelo Lasso entrenado\n")
+cat("  Lambda óptimo: ", round(lambda_optimo_lasso, 6), "\n", sep = "")
 
 # ============================================================================
 # ETAPA 6: MODELO DE ÁRBOL DE CLASIFICACIÓN (RPART)
@@ -715,18 +786,226 @@ xgb_importance <- xgb.importance(model = modelo_xgb)
 print(head(xgb_importance, 10))
 
 # ============================================================================
-# ETAPA 10: COMPARACIÓN DE TODOS LOS MODELOS
+# ETAPA 10: ESTADÍSTICAS DESCRIPTIVAS Y VISUALIZACIONES
 # ============================================================================
 
-cat("\n\n=== ETAPA 10: COMPARACIÓN DE MODELOS ===")
+cat("\n\n=== ETAPA 10: ESTADÍSTICAS DESCRIPTIVAS Y VISUALIZACIONES ===")
+
+# Función auxiliar para crear matriz de confusión con ggplot
+graficar_confusion_matrix <- function(cm, titulo) {
+  # Convertir tabla a data frame
+  cm_df <- as.data.frame(as.table(cm))
+  colnames(cm_df) <- c("Predicho", "Real", "Freq")
+  
+  # Crear gráfico
+  ggplot(cm_df, aes(x = Predicho, y = Real, fill = Freq)) +
+    geom_tile(color = "white", size = 1) +
+    geom_text(aes(label = Freq), vjust = 0.5, size = 5, fontface = "bold") +
+    scale_fill_gradient(low = "#cffafe", high = "#0c4a6e") +
+    labs(title = titulo,
+         x = "Predicho",
+         y = "Real",
+         fill = "Frecuencia") +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+          axis.text = element_text(size = 10, face = "bold"),
+          axis.title = element_text(size = 11, face = "bold"),
+          panel.grid = element_blank(),
+          aspect.ratio = 1)
+}
+
+cat("\n--- Matrices de Confusión por Modelo ---\n")
+
+# Crear gráficos de matrices de confusión
+plot_logistica <- graficar_confusion_matrix(matriz_confusion$table, "Regresión Logística")
+plot_ridge <- graficar_confusion_matrix(matriz_confusion_ridge$table, "Ridge")
+plot_lasso <- graficar_confusion_matrix(matriz_confusion_lasso$table, "Lasso")
+plot_arbol <- graficar_confusion_matrix(confusion_matrix, "Árbol de Clasificación")
+plot_rf <- graficar_confusion_matrix(rf_cm, "Random Forest")
+plot_gbm <- graficar_confusion_matrix(gbm_cm, "GBM")
+plot_xgb <- graficar_confusion_matrix(xgb_cm, "XGBoost")
+
+# Mostrar matrices de confusión en una grilla
+grilla_confusion <- gridExtra::grid.arrange(
+  plot_logistica, plot_ridge, plot_lasso, plot_arbol,
+  plot_rf, plot_gbm, plot_xgb,
+  ncol = 4
+)
+print(grilla_confusion)
+
+cat("\n--- Curvas ROC Comparativas ---\n")
+
+# Crear data frame con todas las ROC
+roc_data <- data.frame(
+  FPR = numeric(),
+  TPR = numeric(),
+  Modelo = character(),
+  AUC = numeric()
+)
+
+# Agregar datos de cada modelo
+modelos_roc <- list(
+  list(roc = curva_roc, nombre = "Logística", auc = auc_logistica),
+  list(roc = curva_roc_ridge, nombre = "Ridge", auc = auc_ridge),
+  list(roc = curva_roc_lasso, nombre = "Lasso", auc = auc_lasso),
+  list(roc = roc_arbol, nombre = "Árbol", auc = auc_arbol),
+  list(roc = roc_rf, nombre = "Random Forest", auc = auc_rf),
+  list(roc = roc_gbm, nombre = "GBM", auc = auc_gbm),
+  list(roc = roc_xgb, nombre = "XGBoost", auc = auc_xgb)
+)
+
+for (modelo in modelos_roc) {
+  coords <- coords(modelo$roc, "all", ret = c("specificity", "sensitivity"))
+  temp_df <- data.frame(
+    FPR = 1 - coords[, 1],
+    TPR = coords[, 2],
+    Modelo = modelo$nombre,
+    AUC = modelo$auc
+  )
+  roc_data <- rbind(roc_data, temp_df)
+}
+
+# Gráfico ROC
+plot_roc <- ggplot(roc_data, aes(x = FPR, y = TPR, color = Modelo, linetype = Modelo)) +
+  geom_line(size = 1) +
+  geom_abline(intercept = 0, slope = 1, color = "gray", linetype = "dashed", size = 1) +
+  scale_color_manual(values = c("Logística" = "#0369a1", "Ridge" = "#0284c7", "Lasso" = "#0ea5e9",
+                                 "Árbol" = "#06b6d4", "Random Forest" = "#0891b2",
+                                 "GBM" = "#0b5345", "XGBoost" = "#155e75")) +
+  scale_linetype_manual(values = c("Logística" = 1, "Ridge" = 1, "Lasso" = 1, "Árbol" = 1,
+                                    "Random Forest" = 1, "GBM" = 1, "XGBoost" = 1)) +
+  labs(title = "Comparación de Curvas ROC - Todos los Modelos",
+       x = "Tasa de Falsos Positivos (FPR)",
+       y = "Tasa de Verdaderos Positivos (TPR)",
+       color = "Modelo",
+       linetype = "Modelo") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, size = 13, face = "bold"),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 11, face = "bold"),
+        legend.position = "bottom",
+        panel.grid.major = element_line(color = "#ecf0f1"))
+
+print(plot_roc)
+
+cat("\n--- Tablas de Variables Importantes (gt) ---\n")
+
+# Tabla de importancia - Random Forest
+cat("\n• Random Forest - Top 10 Variables\n")
+rf_imp_df <- data.frame(
+  Variable = names(rf_model$variable.importance[1:10]),
+  Importancia = as.numeric(rf_model$variable.importance[1:10])
+) %>%
+  mutate(Importancia_Rel = round((Importancia / max(Importancia)) * 100, 2),
+         Ranking = row_number())
+
+rf_gt <- rf_imp_df %>%
+  select(Ranking, Variable, Importancia_Rel) %>%
+  gt() %>%
+  cols_label(
+    Ranking = "Ranking",
+    Variable = "Variable",
+    Importancia_Rel = "Importancia Relativa (%)"
+  ) %>%
+  tab_header(
+    title = "Random Forest",
+    subtitle = "Variables Más Importantes"
+  ) %>%
+  fmt_number(columns = Importancia_Rel, decimals = 2) %>%
+  opt_table_font(font = "helvetica") %>%
+  tab_style(
+    style = cell_fill(color = "#e0f2fe"),
+    locations = cells_body(rows = seq(1, nrow(rf_imp_df), 2))
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  )
+
+print(rf_gt)
+
+# Tabla de importancia - GBM
+cat("\n• GBM - Top 10 Variables\n")
+gbm_imp <- summary(gbm_model, n.trees = 500, plotit = FALSE)
+gbm_imp_df <- gbm_imp[1:10, ] %>%
+  rownames_to_column(var = "Variable") %>%
+  mutate(Importancia_Rel = round((rel.inf / max(rel.inf)) * 100, 2),
+         Ranking = row_number()) %>%
+  select(Ranking, Variable, Importancia_Rel)
+
+gbm_gt <- gbm_imp_df %>%
+  gt() %>%
+  cols_label(
+    Ranking = "Ranking",
+    Variable = "Variable",
+    Importancia_Rel = "Importancia Relativa (%)"
+  ) %>%
+  tab_header(
+    title = "Gradient Boosting (GBM)",
+    subtitle = "Variables Más Importantes"
+  ) %>%
+  fmt_number(columns = Importancia_Rel, decimals = 2) %>%
+  opt_table_font(font = "helvetica") %>%
+  tab_style(
+    style = cell_fill(color = "#e0f2fe"),
+    locations = cells_body(rows = seq(1, nrow(gbm_imp_df), 2))
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  )
+
+print(gbm_gt)
+
+# Tabla de importancia - XGBoost
+cat("\n• XGBoost - Top 10 Variables\n")
+xgb_imp_df <- xgb_importance[1:10, ] %>%
+  as.data.frame() %>%
+  mutate(Importancia_Rel = round((Gain / max(Gain)) * 100, 2),
+         Ranking = row_number()) %>%
+  select(Ranking, Feature, Importancia_Rel) %>%
+  rename(Variable = Feature)
+
+xgb_gt <- xgb_imp_df %>%
+  gt() %>%
+  cols_label(
+    Ranking = "Ranking",
+    Variable = "Variable",
+    Importancia_Rel = "Importancia Relativa (%)"
+  ) %>%
+  tab_header(
+    title = "XGBoost",
+    subtitle = "Variables Más Importantes"
+  ) %>%
+  fmt_number(columns = Importancia_Rel, decimals = 2) %>%
+  opt_table_font(font = "helvetica") %>%
+  tab_style(
+    style = cell_fill(color = "#e0f2fe"),
+    locations = cells_body(rows = seq(1, nrow(xgb_imp_df), 2))
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  )
+
+print(xgb_gt)
+
+cat("\n✓ Estadísticas descriptivas y visualizaciones completadas\n")
+
+# ============================================================================
+# ETAPA 11: COMPARACIÓN DE TODOS LOS MODELOS
+# ============================================================================
+
+cat("\n\n=== ETAPA 11: COMPARACIÓN DE MODELOS ===")
 cat("\n--- Resumen de desempeño de todos los modelos ---\n")
 
 # Crear tabla comparativa
 comparacion <- data.frame(
-  Modelo = c("Logística", "Ridge", "Árbol (RPART)", "Random Forest", "GBM", "XGBoost"),
+  Modelo = c("Logística", "Ridge", "Lasso", "Árbol (RPART)", "Random Forest", "GBM", "XGBoost"),
   Sensibilidad = c(
     round(sensibilidad_logistica * 100, 2),
     round(sensibilidad_ridge * 100, 2),
+    round(sensibilidad_lasso * 100, 2),
     round(sensibilidad_arbol * 100, 2),
     round(sensibilidad_rf * 100, 2),
     round(sensibilidad_gbm * 100, 2),
@@ -735,6 +1014,7 @@ comparacion <- data.frame(
   Especificidad = c(
     round(especificidad_logistica * 100, 2),
     round(especificidad_ridge * 100, 2),
+    round(especificidad_lasso * 100, 2),
     round(especificidad_arbol * 100, 2),
     round(especificidad_rf * 100, 2),
     round(especificidad_gbm * 100, 2),
@@ -743,6 +1023,7 @@ comparacion <- data.frame(
   Precisión = c(
     round(precision_logistica * 100, 2),
     round(precision_ridge * 100, 2),
+    round(precision_lasso * 100, 2),
     round(precision_arbol * 100, 2),
     round(precision_rf * 100, 2),
     round(precision_gbm * 100, 2),
@@ -751,6 +1032,7 @@ comparacion <- data.frame(
   "F1-Score" = c(
     round(f1_logistica, 4),
     round(f1_ridge, 4),
+    round(f1_lasso, 4),
     round(f1_arbol, 4),
     round(f1_rf, 4),
     round(f1_gbm, 4),
@@ -759,6 +1041,7 @@ comparacion <- data.frame(
   AUC = c(
     round(auc_logistica, 4),
     round(auc_ridge, 4),
+    round(auc_lasso, 4),
     round(auc_arbol, 4),
     round(auc_rf, 4),
     round(auc_gbm, 4),
@@ -767,18 +1050,83 @@ comparacion <- data.frame(
   stringsAsFactors = FALSE
 )
 
-print(comparacion)
+# Tabla gt - Resumen de desempeño
+comparacion_gt <- comparacion %>%
+  gt() %>%
+  cols_label(
+    Modelo = "Modelo",
+    Sensibilidad = "Sensibilidad (%)",
+    Especificidad = "Especificidad (%)",
+    Precisión = "Precisión (%)",
+    "F1-Score" = "F1-Score",
+    AUC = "AUC"
+  ) %>%
+  tab_header(
+    title = "Resumen de Desempeño",
+    subtitle = "Comparación de todos los modelos"
+  ) %>%
+  fmt_number(columns = c(Sensibilidad, Especificidad, Precisión), decimals = 2) %>%
+  fmt_number(columns = c("F1-Score", AUC), decimals = 4) %>%
+  opt_table_font(font = "helvetica") %>%
+  tab_style(
+    style = cell_fill(color = "#e0f2fe"),
+    locations = cells_body(rows = seq(1, nrow(comparacion), 2))
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_body(columns = Modelo)
+  )
+
+print(comparacion_gt)
 
 cat("\n--- Ranking por AUC (todos los modelos) ---\n")
 ranking_auc <- data.frame(
-  Modelo = c("Logística", "Ridge", "Random Forest", "GBM", "XGBoost", "Árbol (RPART)"),
-  AUC = c(auc_logistica, auc_ridge, auc_rf, auc_gbm, auc_xgb, auc_arbol)
+  Modelo = c("Logística", "Ridge", "Lasso", "Random Forest", "GBM", "XGBoost", "Árbol (RPART)"),
+  AUC = c(auc_logistica, auc_ridge, auc_lasso, auc_rf, auc_gbm, auc_xgb, auc_arbol)
 )
 ranking_auc <- ranking_auc[order(ranking_auc$AUC, decreasing = TRUE), ]
-rownames(ranking_auc) <- 1:nrow(ranking_auc)
-print(ranking_auc)
+ranking_auc <- ranking_auc %>%
+  mutate(Ranking = row_number()) %>%
+  select(Ranking, Modelo, AUC)
+
+# Tabla gt - Ranking por AUC
+ranking_gt <- ranking_auc %>%
+  gt() %>%
+  cols_label(
+    Ranking = "Ranking",
+    Modelo = "Modelo",
+    AUC = "AUC"
+  ) %>%
+  tab_header(
+    title = "Ranking de Modelos",
+    subtitle = "Ordenados por AUC (Descendente)"
+  ) %>%
+  fmt_number(columns = AUC, decimals = 4) %>%
+  opt_table_font(font = "helvetica") %>%
+  tab_style(
+    style = cell_fill(color = "#e0f2fe"),
+    locations = cells_body(rows = seq(1, nrow(ranking_auc), 2))
+  ) %>%
+  tab_style(
+    style = cell_fill(color = "#bae6fd"),
+    locations = cells_body(rows = 1)
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold", size = "large"),
+    locations = cells_body(rows = 1)
+  )
+
+print(ranking_gt)
 
 cat("\n" , sep = "")
-cat("Modelo con mejor AUC: ", ranking_auc$Modelo[1], " (", round(ranking_auc$AUC[1], 4), ")\n", sep = "")
+cat("✓ Modelo con mejor AUC: ", ranking_auc$Modelo[1], " (", round(ranking_auc$AUC[1], 4), ")\n", sep = "")
 cat("\n=== FIN DEL ANÁLISIS ===\n")
 
