@@ -265,23 +265,23 @@ if (length(vars_numericas) > 0) {
 cat("\n=== ETAPA 4: PREPARACIÓN DE DATOS PARA MODELADO ===\n")
 set.seed(2026)
 #sampling
-n_train <- 100000
-n_test <- 25000
-n_muestra_total <- n_train + n_test
+#n_train <- 100000
+#n_test <- 25000
+#n_muestra_total <- n_train + n_test
 
 #sampling toda la muestra
-data_muestra <- data_interpretable %>% slice_sample(n = n_muestra_total)
+#data_muestra <- data_interpretable %>% slice_sample(n = n_muestra_total)
 
 # Partición estratificada
 trainIndex <- createDataPartition(
-  data_muestra$ArrDel15,
+  data_interpretable$ArrDel15,
   p = 0.80,
   list = FALSE,
   times = 1
 )
 
-datos_train <- data_muestra[trainIndex, ]
-datos_test <- data_muestra[-trainIndex, ]
+datos_train <- data_interpretable[trainIndex, ]
+datos_test <- data_interpretable[-trainIndex, ]
 
 cat("Entrenamiento (después de sampling): ", nrow(datos_train), " filas\n", sep = "")
 cat("Prueba (después de sampling):        ", nrow(datos_test), " filas\n", sep = "")
