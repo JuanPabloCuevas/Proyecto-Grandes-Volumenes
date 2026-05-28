@@ -22,6 +22,7 @@
 library(dplyr)
 library(readr)
 library(tidyr)
+library(tibble)
 library(caret)
 library(pROC)
 library(glmnet)
@@ -865,16 +866,16 @@ for (modelo in modelos_roc) {
   roc_data <- rbind(roc_data, temp_df)
 }
 
-# Gráfico ROC
-plot_roc <- ggplot(roc_data, aes(x = FPR, y = TPR, color = Modelo, linetype = Modelo)) +
+# Modelos Tree-based (Árbol, Random Forest, GBM, XGBoost)
+roc_arboles <- roc_data %>% filter(Modelo %in% c("Árbol", "Random Forest", "GBM", "XGBoost"))
+
+plot_roc_arboles <- ggplot(roc_arboles, aes(x = FPR, y = TPR, color = Modelo, linetype = Modelo)) +
   geom_line(size = 1) +
   geom_abline(intercept = 0, slope = 1, color = "gray", linetype = "dashed", size = 1) +
-  scale_color_manual(values = c("Logística" = "#0369a1", "Ridge" = "#0284c7", "Lasso" = "#0ea5e9",
-                                 "Árbol" = "#06b6d4", "Random Forest" = "#0891b2",
-                                 "GBM" = "#0b5345", "XGBoost" = "#155e75")) +
-  scale_linetype_manual(values = c("Logística" = 1, "Ridge" = 1, "Lasso" = 1, "Árbol" = 1,
-                                    "Random Forest" = 1, "GBM" = 1, "XGBoost" = 1)) +
-  labs(title = "Comparación de Curvas ROC - Todos los Modelos",
+  scale_color_manual(values = c("Árbol" = "#22C55E", "Random Forest" = "#F97316",
+                                 "GBM" = "#A855F7", "XGBoost" = "#92400E")) +
+  scale_linetype_manual(values = c("Árbol" = 1, "Random Forest" = 1, "GBM" = 1, "XGBoost" = 1)) +
+  labs(title = "Curvas ROC - Modelos Tree-based",
        x = "Tasa de Falsos Positivos (FPR)",
        y = "Tasa de Verdaderos Positivos (TPR)",
        color = "Modelo",
@@ -886,7 +887,7 @@ plot_roc <- ggplot(roc_data, aes(x = FPR, y = TPR, color = Modelo, linetype = Mo
         legend.position = "bottom",
         panel.grid.major = element_line(color = "#ecf0f1"))
 
-print(plot_roc)
+print(plot_roc_arboles)
 
 cat("\n--- Tablas de Variables Importantes (gt) ---\n")
 
@@ -1029,7 +1030,7 @@ comparacion <- data.frame(
     round(precision_gbm * 100, 2),
     round(precision_xgb * 100, 2)
   ),
-  "F1-Score" = c(
+  `F1-Score` = c(
     round(f1_logistica, 4),
     round(f1_ridge, 4),
     round(f1_lasso, 4),
@@ -1047,7 +1048,8 @@ comparacion <- data.frame(
     round(auc_gbm, 4),
     round(auc_xgb, 4)
   ),
-  stringsAsFactors = FALSE
+  stringsAsFactors = FALSE,
+  check.names = FALSE
 )
 
 # Tabla gt - Resumen de desempeño
@@ -1058,7 +1060,7 @@ comparacion_gt <- comparacion %>%
     Sensibilidad = "Sensibilidad (%)",
     Especificidad = "Especificidad (%)",
     Precisión = "Precisión (%)",
-    "F1-Score" = "F1-Score",
+    `F1-Score` = "F1-Score",
     AUC = "AUC"
   ) %>%
   tab_header(
@@ -1066,7 +1068,7 @@ comparacion_gt <- comparacion %>%
     subtitle = "Comparación de todos los modelos"
   ) %>%
   fmt_number(columns = c(Sensibilidad, Especificidad, Precisión), decimals = 2) %>%
-  fmt_number(columns = c("F1-Score", AUC), decimals = 4) %>%
+  fmt_number(columns = c(`F1-Score`, AUC), decimals = 4) %>%
   opt_table_font(font = "helvetica") %>%
   tab_style(
     style = cell_fill(color = "#e0f2fe"),
