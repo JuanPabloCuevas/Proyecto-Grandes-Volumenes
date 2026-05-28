@@ -588,14 +588,14 @@ cat("✓ Árbol guardado en: resultados_analisis/arbol_clasificacion.png\n")
 rpart.plot(
   arbol_pruned,
   main = "Árbol de Clasificación - Retrasos Aéreos",
-  type = 4,
-  extra = 101,
-  cex = 0.6,
-  fallen.leaves = TRUE,
-  box.palette = "RdYlGn",
-  shadow.col = "gray70",
-  tweak = 1.2,
-  compress = FALSE
+  type = 1,                    # Tipo de árbol
+  extra = 101,                 # Mostrar probabilidades
+  cex = 0.8,                   # Tamaño del texto
+  fallen.leaves = FALSE,       # Hojas en el fondo
+  box.palette = "RdYlGn",      # Paleta de colores
+  shadow.col = "gray70",       # Sombra para profundidad
+  tweak = 0.8,                 # Ajuste del espaciado
+  compress = FALSE             # No comprimir el árbol
 )
 
 # Predicciones y evaluación
