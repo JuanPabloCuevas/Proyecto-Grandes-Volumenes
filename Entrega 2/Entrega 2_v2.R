@@ -1132,3 +1132,65 @@ cat("\n" , sep = "")
 cat("✓ Modelo con mejor AUC: ", ranking_auc$Modelo[1], " (", round(ranking_auc$AUC[1], 4), ")\n", sep = "")
 cat("\n=== FIN DEL ANÁLISIS ===\n")
 
+# ============================================================================
+# DESCARGA DE GRÁFICOS Y TABLAS
+# ============================================================================
+
+cat("\n\n=== DESCARGANDO GRÁFICOS Y TABLAS ===\n")
+
+# Crear directorio para guardar archivos si no existe
+dir.create("resultados_analisis", showWarnings = FALSE)
+
+# Guardar matrices de confusión individualmente
+cat("\n--- Guardando matrices de confusión ---\n")
+ggsave("resultados_analisis/01_matriz_confusion_logistica.png", plot_logistica, width = 8, height = 6, dpi = 300)
+cat("✓ Guardado: 01_matriz_confusion_logistica.png\n")
+
+ggsave("resultados_analisis/02_matriz_confusion_ridge.png", plot_ridge, width = 8, height = 6, dpi = 300)
+cat("✓ Guardado: 02_matriz_confusion_ridge.png\n")
+
+ggsave("resultados_analisis/03_matriz_confusion_lasso.png", plot_lasso, width = 8, height = 6, dpi = 300)
+cat("✓ Guardado: 03_matriz_confusion_lasso.png\n")
+
+ggsave("resultados_analisis/04_matriz_confusion_arbol.png", plot_arbol, width = 8, height = 6, dpi = 300)
+cat("✓ Guardado: 04_matriz_confusion_arbol.png\n")
+
+ggsave("resultados_analisis/05_matriz_confusion_randomforest.png", plot_rf, width = 8, height = 6, dpi = 300)
+cat("✓ Guardado: 05_matriz_confusion_randomforest.png\n")
+
+ggsave("resultados_analisis/06_matriz_confusion_gbm.png", plot_gbm, width = 8, height = 6, dpi = 300)
+cat("✓ Guardado: 06_matriz_confusion_gbm.png\n")
+
+ggsave("resultados_analisis/07_matriz_confusion_xgboost.png", plot_xgb, width = 8, height = 6, dpi = 300)
+cat("✓ Guardado: 07_matriz_confusion_xgboost.png\n")
+
+# Guardar gráfico ROC
+cat("\n--- Guardando gráfico ROC ---\n")
+ggsave("resultados_analisis/08_curvas_roc_tree_based.png", plot_roc_arboles, width = 10, height = 7, dpi = 300)
+cat("✓ Guardado: 08_curvas_roc_tree_based.png\n")
+
+# Configurar webshot2 para usar Brave Browser
+cat("\n--- Configurando webshot2 para exportar tablas ---\n")
+library(webshot2)
+Sys.setenv(CHROMOTE_CHROME = "C:/Archivos de programa/BraveSoftware/Brave-Browser/Application/brave.exe")
+
+# Guardar tablas gt
+cat("\n--- Guardando tablas gt ---\n")
+gtsave(comparacion_gt, "resultados_analisis/09_tabla_comparacion_modelos.png")
+cat("✓ Guardado: 09_tabla_comparacion_modelos.png\n")
+
+gtsave(ranking_gt, "resultados_analisis/10_tabla_ranking_auc.png")
+cat("✓ Guardado: 10_tabla_ranking_auc.png\n")
+
+gtsave(rf_gt, "resultados_analisis/11_tabla_importancia_randomforest.png")
+cat("✓ Guardado: 11_tabla_importancia_randomforest.png\n")
+
+gtsave(gbm_gt, "resultados_analisis/12_tabla_importancia_gbm.png")
+cat("✓ Guardado: 12_tabla_importancia_gbm.png\n")
+
+gtsave(xgb_gt, "resultados_analisis/13_tabla_importancia_xgboost.png")
+cat("✓ Guardado: 13_tabla_importancia_xgboost.png\n")
+
+cat("\n✓ Todos los archivos han sido guardados en la carpeta 'resultados_analisis'\n")
+cat("=== DESCARGA COMPLETADA ===\n")
+
