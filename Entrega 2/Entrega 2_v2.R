@@ -1000,9 +1000,27 @@ cat("\n✓ Estadísticas descriptivas y visualizaciones completadas\n")
 cat("\n\n=== ETAPA 11: COMPARACIÓN DE MODELOS ===")
 cat("\n--- Resumen de desempeño de todos los modelos ---\n")
 
+# Calcular Accuracy para cada modelo
+accuracy_logistica <- (tn_logistica + tp_logistica) / (tn_logistica + tp_logistica + fp_logistica + fn_logistica)
+accuracy_ridge <- (tn_ridge + tp_ridge) / (tn_ridge + tp_ridge + fp_ridge + fn_ridge)
+accuracy_lasso <- (tn_lasso + tp_lasso) / (tn_lasso + tp_lasso + fp_lasso + fn_lasso)
+accuracy_arbol <- (tn_arbol + tp_arbol) / (tn_arbol + tp_arbol + fp_arbol + fn_arbol)
+accuracy_rf <- (tn_rf + tp_rf) / (tn_rf + tp_rf + fp_rf + fn_rf)
+accuracy_gbm <- (tn_gbm + tp_gbm) / (tn_gbm + tp_gbm + fp_gbm + fn_gbm)
+accuracy_xgb <- (tn_xgb + tp_xgb) / (tn_xgb + tp_xgb + fp_xgb + fn_xgb)
+
 # Crear tabla comparativa
 comparacion <- data.frame(
   Modelo = c("Logística", "Ridge", "Lasso", "Árbol (RPART)", "Random Forest", "GBM", "XGBoost"),
+  Accuracy = c(
+    round(accuracy_logistica * 100, 2),
+    round(accuracy_ridge * 100, 2),
+    round(accuracy_lasso * 100, 2),
+    round(accuracy_arbol * 100, 2),
+    round(accuracy_rf * 100, 2),
+    round(accuracy_gbm * 100, 2),
+    round(accuracy_xgb * 100, 2)
+  ),
   Sensibilidad = c(
     round(sensibilidad_logistica * 100, 2),
     round(sensibilidad_ridge * 100, 2),
@@ -1057,6 +1075,7 @@ comparacion_gt <- comparacion %>%
   gt() %>%
   cols_label(
     Modelo = "Modelo",
+    Accuracy = "Accuracy (%)",
     Sensibilidad = "Sensibilidad (%)",
     Especificidad = "Especificidad (%)",
     Precisión = "Precisión (%)",
@@ -1067,7 +1086,7 @@ comparacion_gt <- comparacion %>%
     title = "Resumen de Desempeño",
     subtitle = "Comparación de todos los modelos"
   ) %>%
-  fmt_number(columns = c(Sensibilidad, Especificidad, Precisión), decimals = 2) %>%
+  fmt_number(columns = c(Accuracy, Sensibilidad, Especificidad, Precisión), decimals = 2) %>%
   fmt_number(columns = c(`F1-Score`, AUC), decimals = 4) %>%
   opt_table_font(font = "helvetica") %>%
   tab_style(
